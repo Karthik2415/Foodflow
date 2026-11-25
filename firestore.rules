@@ -7,7 +7,9 @@ service cloud.firestore {
     }
 
     function getUserRole() {
-      return request.auth.token.role;
+      return ('role' in request.auth.token && request.auth.token.role != null)
+        ? request.auth.token.role
+        : get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
     function isOwnerOrAdmin() {
@@ -138,6 +140,11 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read: if isAuthenticated();
       allow write: if isOwnerOrAdmin();
+    }
+
+    // Atomic document counters
+    match /counters/{counterId} {
+      allow read, write: if isAuthenticated();
     }
   }
 }

@@ -3,7 +3,8 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/lib/store/store-context';
-import { PageHeader, Card, CardHeader, Button, StatusBadge, EmptyState, Modal, Tabs, KPICard } from '@/components/ui';
+import { useAuth } from '@/lib/auth/auth-context';
+import { PageHeader, Card, CardHeader, Button, StatusBadge, EmptyState, Modal, Tabs, KPICard, Input } from '@/components/ui';
 import { formatCurrency, fromScaledQty, formatDate } from '@/lib/utils';
 import { INVOICE_STATUS_CONFIG } from '@/lib/constants';
 import type { Invoice } from '@/lib/types';
@@ -13,11 +14,14 @@ import {
 } from 'lucide-react';
 
 export default function InvoicesPage() {
-  const { invoices, settings } = useStore();
+  const { invoices, settings, cancelInvoice } = useStore();
+  const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Invoice | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
 
   // Filtered invoices
   const filteredInvoices = useMemo(() => {
@@ -96,7 +100,7 @@ export default function InvoicesPage() {
               />
             </div>
             <div className="text-xs text-surface-500 font-medium">
-              Seller GSTIN: <strong className="font-mono text-surface-800">{settings.companyGstin}</strong> (Tamil Nadu)
+              Seller GSTIN: <strong className="font-mono text-surface-800">{settings.companyGstin}</strong> ({settings.factoryState})
             </div>
           </div>
         </div>
@@ -160,14 +164,29 @@ export default function InvoicesPage() {
                       <StatusBadge status={inv.status} config={INVOICE_STATUS_CONFIG} size="md" />
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setSelectedInvoice(inv)}
-                        icon={Eye}
-                      >
-                        Preview
-                      </Button>
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setSelectedInvoice(inv)}
+                          icon={Eye}
+                        >
+                          Preview
+                        </Button>
+                        {inv.status === 'posted' && (
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => {
+                              setCancelTarget(inv);
+                              setCancelReason('');
+                            }}
+                            icon={XCircle}
+                          >
+                            Cancel
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -327,6 +346,40 @@ export default function InvoicesPage() {
             </div>
           </div>
         )}
+      </Modal>
+      {/* ===== Cancel Invoice Modal ===== */}
+      <Modal
+        open={!!cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        title={cancelTarget ? `Cancel Invoice ${cancelTarget.invoiceNumber}` : 'Cancel Invoice'}
+        description="Posted invoices are never deleted. Record a statutory cancellation reason."
+        size="sm"
+      >
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!cancelTarget || !cancelReason.trim()) return;
+            await cancelInvoice(cancelTarget.id, cancelReason.trim(), user?.displayName || 'Admin');
+            setCancelTarget(null);
+          }}
+          className="space-y-4"
+        >
+          <Input
+            label="Cancellation Reason *"
+            placeholder="e.g. Incorrect GSTIN or order cancelled"
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            required
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setCancelTarget(null)}>
+              Close
+            </Button>
+            <Button type="submit" variant="danger">
+              Confirm Cancellation
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

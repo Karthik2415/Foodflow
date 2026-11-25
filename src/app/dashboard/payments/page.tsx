@@ -24,6 +24,7 @@ export default function PaymentsPage() {
 
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState(customers[0]?.id || '');
+  const [targetInvoiceId, setTargetInvoiceId] = useState('');
   const [amountRupees, setAmountRupees] = useState(0);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('bank_transfer');
   const [referenceNumber, setReferenceNumber] = useState('');
@@ -31,6 +32,16 @@ export default function PaymentsPage() {
 
   // Customer selected for modal
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId) || customers[0];
+  const openCustomerInvoices = useMemo(
+    () =>
+      invoices.filter(
+        (inv) =>
+          inv.customerId === selectedCustomer?.id &&
+          inv.status === 'posted' &&
+          inv.grandTotalPaise - (inv.paidPaise || 0) > 0
+      ),
+    [invoices, selectedCustomer]
+  );
 
   // Aggregate stats
   const stats = useMemo(() => {
@@ -50,11 +61,11 @@ export default function PaymentsPage() {
     }));
   }, [customers]);
 
-  const handlePaymentSubmit = (e: React.FormEvent) => {
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCustomer) return;
 
-    recordPayment({
+    await recordPayment({
       customerId: selectedCustomer.id,
       customerName: selectedCustomer.name,
       amountPaise: toPaise(amountRupees),
@@ -62,8 +73,10 @@ export default function PaymentsPage() {
       referenceNumber,
       notes: paymentNotes,
       receivedBy: user?.displayName || 'Accounts Department',
+      targetInvoiceId: targetInvoiceId || undefined,
     });
 
+    setTargetInvoiceId('');
     setIsRecordModalOpen(false);
   };
 
@@ -287,6 +300,24 @@ export default function PaymentsPage() {
               ))}
             </select>
           </div>
+
+          {openCustomerInvoices.length > 0 && (
+            <div>
+              <label className="text-sm font-medium text-surface-700 block mb-1">Allocate to Invoice (Optional)</label>
+              <select
+                value={targetInvoiceId}
+                onChange={(e) => setTargetInvoiceId(e.target.value)}
+                className="w-full h-10 px-3 rounded-lg border border-surface-300 bg-white text-sm outline-none"
+              >
+                <option value="">Auto-allocate (oldest open invoices first)</option>
+                {openCustomerInvoices.map((inv) => (
+                  <option key={inv.id} value={inv.id}>
+                    {inv.invoiceNumber} — Due: {formatCurrency(inv.grandTotalPaise - (inv.paidPaise || 0))}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="text-sm font-medium text-surface-700 block mb-1">Amount Received (₹ Rupees)</label>

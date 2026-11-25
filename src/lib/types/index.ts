@@ -189,6 +189,7 @@ export type SalesOrderStatus =
   | 'under_review'
   | 'approved'
   | 'rejected'
+  | 'cancelled'
   | 'invoiced'
   | 'dispatched'
   | 'completed';
@@ -261,6 +262,8 @@ export interface Invoice {
   grandTotalPaise: number;
   grandTotalRounded: number;
   status: InvoiceStatus;
+  paidPaise?: number;
+  paymentStatus?: 'unpaid' | 'partial' | 'paid';
   pdfUrl?: string;
   idempotencyKey: string;
   financialYear: string;

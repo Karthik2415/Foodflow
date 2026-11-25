@@ -9,7 +9,7 @@ import { PRODUCTION_STATUS_CONFIG } from '@/lib/constants';
 import type { ProductionRun, ProductionMaterial } from '@/lib/types';
 import {
   Factory, Plus, Play, CheckCircle2, Package,
-  ClipboardList, Trash2
+  ClipboardList, Trash2, AlertTriangle
 } from 'lucide-react';
 
 export default function ProductionPage() {
@@ -23,8 +23,10 @@ export default function ProductionPage() {
     createProductionRun,
     issueProductionMaterials,
     completeProductionRun,
+    getProductionCost,
   } = useStore();
   const { user } = useAuth();
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // New Run Modal state
   const [isNewRunModalOpen, setIsNewRunModalOpen] = useState(false);
@@ -75,16 +77,21 @@ export default function ProductionPage() {
   };
 
   // Submit Material Issue
-  const handleIssueSubmit = (e: React.FormEvent) => {
+  const handleIssueSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!issueModalRun) return;
+    setActionError(null);
 
     const materialsToIssue = Object.entries(issueInputs).map(([materialId, qty]) => ({
       materialId,
       quantity: toScaledQty(qty),
     }));
 
-    issueProductionMaterials(issueModalRun.id, materialsToIssue);
+    const res = await issueProductionMaterials(issueModalRun.id, materialsToIssue);
+    if (!res.ok) {
+      setActionError(res.error || 'Failed to issue materials.');
+      return;
+    }
     setIssueModalRun(null);
   };
 
@@ -97,16 +104,21 @@ export default function ProductionPage() {
   };
 
   // Submit Completion
-  const handleCompletionSubmit = (e: React.FormEvent) => {
+  const handleCompletionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!completionModalRun) return;
+    setActionError(null);
 
-    completeProductionRun(
+    const res = await completeProductionRun(
       completionModalRun.id,
       goodOutput,
       rejectedOutput,
       damagedPackaging
     );
+    if (!res.ok) {
+      setActionError(res.error || 'Failed to complete production run.');
+      return;
+    }
     setCompletionModalRun(null);
   };
 
@@ -206,6 +218,18 @@ export default function ProductionPage() {
           </Button>
         </div>
       </PageHeader>
+
+      {actionError && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 font-medium">
+            <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+            <span>{actionError}</span>
+          </div>
+          <button onClick={() => setActionError(null)} className="text-xs font-bold underline">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -347,13 +371,22 @@ export default function ProductionPage() {
                       </div>
 
                       <div className="p-4 bg-white rounded-xl border border-surface-200 shadow-sm">
-                        <div className="text-xs font-semibold text-surface-400 uppercase tracking-wider">Material Cost / Pkt</div>
-                        <div className="text-2xl font-black text-primary-700 tabular-nums mt-0.5">
-                          {run.goodOutput > 0
-                            ? formatCurrency(Math.round((run.totalMaterialCostPaise || 0) / fromScaledQty(run.goodOutput)))
-                            : '—'}
-                        </div>
-                        <div className="text-xs text-surface-500 mt-1 font-medium">Excluding labour & power</div>
+                        <div className="text-xs font-semibold text-surface-400 uppercase tracking-wider">Unit Cost (Incl. Overheads)</div>
+                        {(() => {
+                          const cost = getProductionCost(run.id);
+                          return (
+                            <>
+                              <div className="text-2xl font-black text-primary-700 tabular-nums mt-0.5">
+                                {cost && cost.costPerPacketPaise > 0
+                                  ? formatCurrency(cost.costPerPacketPaise)
+                                  : '—'}
+                              </div>
+                              <div className="text-xs text-surface-500 mt-1 font-medium">
+                                Total Batch: {formatCurrency(cost?.totalCostPaise || run.totalMaterialCostPaise || 0)}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   ) : run.status === 'in_progress' ? (

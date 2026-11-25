@@ -13,11 +13,12 @@ import {
 } from 'lucide-react';
 
 export default function InventoryPage() {
-  const { inventoryBalances, stockLedger, materials, products, createMaterial } = useStore();
+  const { inventoryBalances, stockLedger, materials, products, createMaterial, reconcileStockLedger } = useStore();
 
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddMatOpen, setIsAddMatOpen] = useState(false);
+  const [reconcileMsg, setReconcileMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const [matName, setMatName] = useState('');
@@ -112,10 +113,32 @@ export default function InventoryPage() {
         title="Inventory & Stock Ledger"
         description="Real-time stock valuation, weighted average costing, and immutable stock ledger movements"
       >
-        <Button onClick={() => setIsAddMatOpen(true)} icon={Plus}>
-          Add Material
-        </Button>
+        <div className="flex items-center gap-2.5">
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              const res = await reconcileStockLedger(true);
+              setReconcileMsg(
+                res.reconciled
+                  ? `Stock ledger reconciled: all ${res.checkedItems} item balances match the immutable stock ledger.`
+                  : `Repaired ${res.mismatches.length} item balance mismatch(es) from the stock ledger.`
+              );
+            }}
+          >
+            Reconcile Ledger
+          </Button>
+          <Button onClick={() => setIsAddMatOpen(true)} icon={Plus}>
+            Add Material
+          </Button>
+        </div>
       </PageHeader>
+
+      {reconcileMsg && (
+        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between">
+          <span>{reconcileMsg}</span>
+          <button onClick={() => setReconcileMsg(null)} className="underline ml-3">Dismiss</button>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -22,8 +22,11 @@ export default function SalesOrdersPage() {
     inventoryBalances,
     settings,
     createSalesOrder,
+    submitSalesOrder,
+    markOrderUnderReview,
     approveSalesOrder,
     rejectSalesOrder,
+    cancelSalesOrder,
     createInvoice,
     dispatchOrder,
     checkStockAvailability,
@@ -36,6 +39,7 @@ export default function SalesOrdersPage() {
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
   const [rejectModalOrder, setRejectModalOrder] = useState<SalesOrder | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // New Order Form state
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
@@ -90,14 +94,16 @@ export default function SalesOrdersPage() {
   // Calculated totals for new order modal
   const newOrderCalculations = useMemo(() => {
     let taxablePaise = 0;
+    let gstAmountPaise = 0;
     let shortages: StockShortage[] = [];
 
     const computedItems: SalesOrderItem[] = orderItems.map((item) => {
       const prod = products.find((p) => p.id === item.productId);
       const unitPrice = prod?.sellingPricePaise || 0;
-      const gstRate = prod?.gstRatePercent || 5;
-      const amount = (unitPrice * item.quantity);
+      const gstRate = prod?.gstRatePercent ?? 5;
+      const amount = unitPrice * item.quantity;
       taxablePaise += amount;
+      gstAmountPaise += Math.round((amount * gstRate) / 100);
 
       const stockCheck = checkStockAvailability(item.productId, toScaledQty(item.quantity));
       if (!stockCheck.available) {
@@ -123,8 +129,6 @@ export default function SalesOrdersPage() {
     });
 
     const isInterstate = currentCustomer ? currentCustomer.state !== settings.factoryState : false;
-    const gstRate = 5;
-    const gstAmountPaise = Math.round((taxablePaise * gstRate) / 100);
     const grandTotalPaise = taxablePaise + gstAmountPaise;
 
     return {
@@ -184,8 +188,13 @@ export default function SalesOrdersPage() {
     }
   };
 
-  const handleDispatch = (order: SalesOrder) => {
-    dispatchOrder(order.id, user?.displayName || 'Dispatcher');
+  const handleDispatch = async (order: SalesOrder) => {
+    setActionError(null);
+    const res = await dispatchOrder(order.id, user?.displayName || 'Dispatcher');
+    if (!res.ok) {
+      setActionError(res.error || 'Failed to dispatch order due to insufficient stock.');
+      return;
+    }
     if (selectedOrder?.id === order.id) {
       setSelectedOrder({ ...order, status: 'dispatched' });
     }
@@ -210,6 +219,21 @@ export default function SalesOrdersPage() {
           New Sales Order
         </Button>
       </PageHeader>
+
+      {actionError && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 font-medium">
+            <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+            <span>{actionError}</span>
+          </div>
+          <button
+            onClick={() => setActionError(null)}
+            className="text-xs font-bold text-rose-700 hover:underline shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* KPI Highlights */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -376,7 +400,47 @@ export default function SalesOrdersPage() {
                       Details
                     </Button>
 
+                    {order.status === 'draft' && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => submitSalesOrder(order.id)}
+                        icon={ArrowRight}
+                      >
+                        Submit Order
+                      </Button>
+                    )}
+
                     {order.status === 'submitted' && (
+                      <>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => markOrderUnderReview(order.id)}
+                          icon={Clock}
+                        >
+                          Review
+                        </Button>
+                        <Button
+                          variant="success"
+                          size="sm"
+                          onClick={() => handleApprove(order)}
+                          icon={Check}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => setRejectModalOrder(order)}
+                          icon={X}
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    )}
+
+                    {order.status === 'under_review' && (
                       <>
                         <Button
                           variant="success"

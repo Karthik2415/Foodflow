@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { APP_NAME, NAV_ITEMS } from '@/lib/constants';
+import { APP_NAME, NAV_GROUPS } from '@/lib/constants';
 import type { UserRole } from '@/lib/types';
 import { OfflineIndicator } from '@/components/layout/offline-indicator';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -83,19 +83,28 @@ export function AppShell({
   userName = 'Demo User',
   userEmail = 'demo@foodflow.in',
 }: AppShellProps) {
-  const { user, login, logout } = useAuth();
+  const { user, login, logout, isLiveFirebase } = useAuth();
   const { notifications } = useStore();
   const router = useRouter();
   const pathname = usePathname();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
 
-  const navItems = NAV_ITEMS[user?.role || userRole] || NAV_ITEMS.owner;
+  const activeRole = user?.role || userRole;
+  const visibleGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => item.roles.includes(activeRole)),
+  })).filter((group) => group.items.length > 0);
+
+  const toggleGroup = (groupId: string) => {
+    setCollapsedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
 
   // Global Keyboard Shortcut: ⌘K or Ctrl+K to toggle Command Palette
   useEffect(() => {
@@ -128,22 +137,15 @@ export function AppShell({
     } catch {}
   };
 
-  // Command palette quick actions
-  const commandItems = [
-    { label: 'Executive Overview', href: '/dashboard', icon: LayoutDashboard, category: 'Navigation' },
-    { label: 'Sales & Orders', href: '/dashboard/sales', icon: ShoppingCart, category: 'Navigation' },
-    { label: 'Inventory & Stock Ledger', href: '/dashboard/inventory', icon: Warehouse, category: 'Navigation' },
-    { label: 'Production Runs & BOM', href: '/dashboard/production', icon: Factory, category: 'Navigation' },
-    { label: 'GST Tax Invoices', href: '/dashboard/invoices', icon: FileText, category: 'Navigation' },
-    { label: 'Procurement & GRN', href: '/dashboard/purchases', icon: PackagePlus, category: 'Navigation' },
-    { label: 'Customer Payments', href: '/dashboard/payments', icon: IndianRupee, category: 'Navigation' },
-    { label: 'Costing & Profitability', href: '/dashboard/costing', icon: Calculator, category: 'Navigation' },
-    { label: 'Compliance Reports', href: '/dashboard/reports', icon: BarChart3, category: 'Navigation' },
-    { label: 'Customer Directory', href: '/dashboard/customers', icon: Users, category: 'Navigation' },
-    { label: 'Product Catalogue', href: '/dashboard/products', icon: Package, category: 'Navigation' },
-    { label: 'Audit Trail', href: '/dashboard/audit', icon: Shield, category: 'Navigation' },
-    { label: 'Factory Settings', href: '/dashboard/settings', icon: Settings, category: 'Navigation' },
-  ];
+  // Command palette quick actions derived from role-permitted navigation groups
+  const commandItems = visibleGroups.flatMap((group) =>
+    group.items.map((item) => ({
+      label: item.label,
+      href: item.href,
+      icon: iconMap[item.icon] || LayoutDashboard,
+      category: group.label,
+    }))
+  );
 
   const filteredCommandItems = commandItems.filter((item) =>
     item.label.toLowerCase().includes(commandQuery.toLowerCase())
@@ -183,53 +185,71 @@ export function AppShell({
           </AnimatePresence>
         </div>
 
-        {/* Navigation Items */}
-        <nav className="flex-1 overflow-y-auto px-3.5 py-5 space-y-1 scrollbar-none">
-          {navItems.map((item) => {
-            const Icon = iconMap[item.icon] || LayoutDashboard;
-            const isActive =
-              item.href === '/dashboard'
-                ? pathname === '/dashboard'
-                : pathname.startsWith(item.href);
-
+        {/* Navigation Items (Grouped & Collapsible) */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4 scrollbar-none">
+          {visibleGroups.map((group) => {
+            const isGroupCollapsed = !!collapsedGroups[group.id];
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'group relative flex items-center gap-3.5 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200',
-                  isActive
-                    ? 'text-primary-600 bg-primary-50/80 shadow-sm'
-                    : 'text-surface-600 hover:bg-surface-100/70 hover:text-surface-900'
+              <div key={group.id} className="space-y-1">
+                {!sidebarCollapsed && (
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.id)}
+                    className="w-full flex items-center justify-between px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-surface-400 hover:text-surface-700 transition-colors"
+                  >
+                    <span>{group.label}</span>
+                    <ChevronDown
+                      className={cn(
+                        'h-3.5 w-3.5 transition-transform duration-200',
+                        isGroupCollapsed ? '-rotate-90' : ''
+                      )}
+                    />
+                  </button>
                 )}
-                title={sidebarCollapsed ? item.label : undefined}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="sidebar-active-pill"
-                    className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary-600"
-                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                  />
+                {(!isGroupCollapsed || sidebarCollapsed) && (
+                  <div className="space-y-0.5">
+                    {group.items.map((item) => {
+                      const Icon = iconMap[item.icon] || LayoutDashboard;
+                      const baseHref = item.href.split('?')[0];
+                      const isActive =
+                        baseHref === '/dashboard'
+                          ? pathname === '/dashboard'
+                          : pathname === baseHref && !item.href.includes('?');
+
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={cn(
+                            'group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-150',
+                            isActive
+                              ? 'text-primary-700 bg-primary-50/90 shadow-xs'
+                              : 'text-surface-600 hover:bg-surface-100/80 hover:text-surface-900'
+                          )}
+                          title={sidebarCollapsed ? item.label : undefined}
+                        >
+                          {isActive && (
+                            <motion.div
+                              layoutId="sidebar-active-pill"
+                              className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary-600"
+                              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                            />
+                          )}
+                          <Icon
+                            className={cn(
+                              'h-4.5 w-4.5 shrink-0 transition-transform duration-150 group-hover:scale-105',
+                              isActive ? 'text-primary-600' : 'text-surface-400 group-hover:text-surface-600'
+                            )}
+                          />
+                          {!sidebarCollapsed && (
+                            <span className="truncate">{item.label}</span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
                 )}
-                <Icon
-                  className={cn(
-                    'h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-105',
-                    isActive ? 'text-primary-600' : 'text-surface-400 group-hover:text-surface-600'
-                  )}
-                />
-                <AnimatePresence>
-                  {!sidebarCollapsed && (
-                    <motion.span
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="truncate"
-                    >
-                      {item.label}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </Link>
+              </div>
             );
           })}
         </nav>
@@ -303,7 +323,13 @@ export function AppShell({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Quick Role Switcher Dropdown */}
+            {/* Role Badge (Live Firebase) or Quick Role Switcher (Demo Mode only) */}
+            {isLiveFirebase ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-surface-200 bg-surface-50 text-xs font-bold text-surface-700">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="capitalize">{(user?.role || userRole).replace('_', ' ')}</span>
+              </div>
+            ) : (
             <div className="relative">
               <button
                 onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
@@ -325,7 +351,7 @@ export function AppShell({
                   >
                     <div className="px-3 py-2 border-b border-surface-100">
                       <p className="text-xs font-extrabold text-surface-900">Switch Application Persona</p>
-                      <p className="text-[11px] text-surface-400">Instantly view role-tailored dashboards</p>
+                      <p className="text-[11px] text-surface-400">Demo mode persona switcher</p>
                     </div>
                     <div className="space-y-1 pt-1.5">
                       {ROLE_DETAILS.map((r) => (
@@ -353,6 +379,7 @@ export function AppShell({
                 )}
               </AnimatePresence>
             </div>
+            )}
 
             {/* Notifications Popover */}
             <div className="relative">
@@ -489,6 +516,71 @@ export function AppShell({
 
       {/* Offline Status PWA Banner */}
       <OfflineIndicator />
+
+      {/* ===== Mobile Navigation Drawer ===== */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <motion.aside
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+              className="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-surface-200 shadow-2xl flex flex-col lg:hidden"
+            >
+              <div className="flex h-16 items-center justify-between border-b border-surface-200 px-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-600 to-primary-800 text-white font-extrabold text-sm">
+                    FF
+                  </div>
+                  <span className="text-base font-extrabold text-surface-900">{APP_NAME}</span>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 rounded-lg text-surface-400 hover:bg-surface-100 hover:text-surface-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
+                {visibleGroups.map((group) => (
+                  <div key={group.id} className="space-y-1">
+                    <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-surface-400">
+                      {group.label}
+                    </div>
+                    {group.items.map((item) => {
+                      const Icon = iconMap[item.icon] || LayoutDashboard;
+                      const baseHref = item.href.split('?')[0];
+                      const isActive = baseHref === '/dashboard' ? pathname === '/dashboard' : pathname === baseHref;
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={cn(
+                            'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors',
+                            isActive ? 'bg-primary-50 text-primary-700' : 'text-surface-600 hover:bg-surface-100'
+                          )}
+                        >
+                          <Icon className="h-4.5 w-4.5 shrink-0" />
+                          <span>{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ))}
+              </nav>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
