@@ -1,0 +1,143 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+
+    function isOwnerOrAdmin() {
+      return isAuthenticated() && (getUserRole() == 'owner' || getUserRole() == 'admin');
+    }
+
+    function isSalesman() {
+      return isAuthenticated() && (getUserRole() == 'salesman' || isOwnerOrAdmin());
+    }
+
+    function isProduction() {
+      return isAuthenticated() && (getUserRole() == 'production_supervisor' || isOwnerOrAdmin());
+    }
+
+    function isAccountant() {
+      return isAuthenticated() && (getUserRole() == 'accountant' || isOwnerOrAdmin());
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwnerOrAdmin() || request.auth.uid == userId;
+    }
+
+    // Customers
+    match /customers/{customerId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwnerOrAdmin() || isSalesman() || isAccountant();
+    }
+
+    // Products & Master Data
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwnerOrAdmin();
+    }
+
+    match /rawMaterials/{materialId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwnerOrAdmin() || isProduction();
+    }
+
+    match /packagingMaterials/{materialId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwnerOrAdmin() || isProduction();
+    }
+
+    // BOM (Bill of Materials)
+    match /bomHeaders/{headerId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwnerOrAdmin() || isProduction();
+    }
+
+    match /bomItems/{itemId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwnerOrAdmin() || isProduction();
+    }
+
+    // Suppliers & Purchases
+    match /suppliers/{supplierId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwnerOrAdmin() || isAccountant();
+    }
+
+    match /purchaseReceipts/{receiptId} {
+      allow read: if isAuthenticated();
+      // Immutable after creation
+      allow create: if isOwnerOrAdmin() || isProduction() || isAccountant();
+      allow update, delete: if false;
+    }
+
+    // Sales Orders
+    match /salesOrders/{orderId} {
+      allow read: if isAuthenticated();
+      allow create: if isSalesman() || isOwnerOrAdmin();
+      allow update: if isOwnerOrAdmin() || isSalesman();
+      allow delete: if isOwnerOrAdmin();
+    }
+
+    // Invoices - Immutable posting
+    match /invoices/{invoiceId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwnerOrAdmin() || isAccountant();
+      allow update: if isOwnerOrAdmin(); // only for statutory cancellation
+      allow delete: if false; // Never delete posted invoices
+    }
+
+    // Production Runs
+    match /productionRuns/{runId} {
+      allow read: if isAuthenticated();
+      allow write: if isProduction() || isOwnerOrAdmin();
+    }
+
+    // Stock Ledger - Immutable append-only audit trail
+    match /stockLedger/{entryId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwnerOrAdmin() || isProduction();
+      allow update, delete: if false;
+    }
+
+    // Inventory Balances - Source of truth derived ledger
+    match /inventoryBalances/{balanceId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwnerOrAdmin() || isProduction();
+    }
+
+    // Payments
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAccountant() || isOwnerOrAdmin();
+      allow update, delete: if isOwnerOrAdmin();
+    }
+
+    // Expenses & Costing
+    match /expenses/{expenseId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAccountant() || isOwnerOrAdmin();
+      allow delete: if isOwnerOrAdmin();
+    }
+
+    // Audit logs
+    match /auditLogs/{logId} {
+      allow read: if isOwnerOrAdmin() || isAccountant();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // System Settings
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwnerOrAdmin();
+    }
+  }
+}

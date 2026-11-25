@@ -1,0 +1,236 @@
+@import "tailwindcss";
+
+/* ===== DESIGN SYSTEM TOKENS ===== */
+
+@theme {
+  /* --- Color System --- */
+  /* Primary: Deep Midnight Navy & Electric Indigo */
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #4f46e5;
+  --color-primary-600: #3730a3;
+  --color-primary-700: #312e81;
+  --color-primary-800: #1e1b4b;
+  --color-primary-900: #141238;
+  --color-primary-950: #0a0920;
+
+  /* Neutral: Warm Luxe Surfaces */
+  --color-surface-50: #fbfbfd;
+  --color-surface-100: #f4f4f7;
+  --color-surface-200: #e9e9ee;
+  --color-surface-300: #d8d8e2;
+  --color-surface-400: #9e9eb0;
+  --color-surface-500: #6f6f82;
+  --color-surface-600: #525263;
+  --color-surface-700: #3c3c4a;
+  --color-surface-800: #262631;
+  --color-surface-900: #16161f;
+  --color-surface-950: #0c0c12;
+
+  /* Success: Rich Emerald */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-200: #a7f3d0;
+  --color-success-300: #6ee7b7;
+  --color-success-400: #34d399;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-success-800: #065f46;
+  --color-success-900: #064e3b;
+  --color-success-950: #022c22;
+
+  /* Warning: Warm Amber */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+  --color-warning-950: #451a03;
+
+  /* Error: Refined Rose Red */
+  --color-error-50: #fff1f2;
+  --color-error-100: #ffe4e6;
+  --color-error-200: #fecdd3;
+  --color-error-300: #fda4af;
+  --color-error-400: #fb7185;
+  --color-error-500: #f43f5e;
+  --color-error-600: #e11d48;
+  --color-error-700: #be123c;
+  --color-error-800: #9f1239;
+  --color-error-900: #881337;
+  --color-error-950: #4c0519;
+
+  /* Info: Cyan & Violet */
+  --color-info-50: #f0f9ff;
+  --color-info-100: #e0f2fe;
+  --color-info-200: #bae6fd;
+  --color-info-300: #7dd3fc;
+  --color-info-400: #38bdf8;
+  --color-info-500: #0ea5e9;
+  --color-info-600: #0284c7;
+  --color-info-700: #0369a1;
+  --color-info-800: #075985;
+  --color-info-900: #0c4a6e;
+  --color-info-950: #082f49;
+
+  /* --- Typography Scale --- */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* --- Spacing --- */
+  --spacing-page: 2rem;
+  --spacing-section: 1.5rem;
+  --spacing-card: 1.5rem;
+
+  /* --- Radius --- */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+
+  /* --- Luxe Shadows --- */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-card: 0 2px 8px -2px rgba(18, 18, 30, 0.05), 0 1px 2px 0 rgba(18, 18, 30, 0.03);
+  --shadow-card-hover: 0 14px 28px -6px rgba(18, 18, 30, 0.08), 0 4px 10px -2px rgba(18, 18, 30, 0.04);
+  --shadow-dropdown: 0 20px 30px -8px rgba(14, 14, 26, 0.12), 0 8px 12px -4px rgba(14, 14, 26, 0.04);
+  --shadow-modal: 0 25px 50px -12px rgba(10, 10, 24, 0.25);
+  --shadow-glow: 0 0 35px -5px rgba(79, 70, 229, 0.25);
+  --shadow-success-glow: 0 0 25px -4px rgba(16, 185, 129, 0.25);
+
+  /* --- Transitions --- */
+  --duration-fast: 150ms;
+  --duration-normal: 220ms;
+  --duration-slow: 350ms;
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ===== BASE STYLES ===== */
+
+* {
+  border-color: var(--color-surface-200);
+}
+
+html {
+  font-size: 15px; /* Slightly increased font-size for better readability */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-surface-50);
+  color: var(--color-surface-900);
+  line-height: 1.6;
+}
+
+/* Tabular numerals for financial and measurement data */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Glassmorphism Classes */
+.glass-surface {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.glass-surface-dark {
+  background: rgba(20, 18, 56, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glow-card {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glow-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.3), transparent 60%, rgba(16, 185, 129, 0.2));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.glow-card:hover::after {
+  opacity: 1;
+}
+
+/* Premium Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-300);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-surface-400);
+}
+
+/* Accessible focus ring */
+*:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Ambient Pulse Animations */
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Shimmer Loading Effect */
+@keyframes shimmerLuxe {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-luxe {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-100) 0%,
+    var(--color-surface-200) 50%,
+    var(--color-surface-100) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerLuxe 1.8s ease-in-out infinite;
+}

@@ -1,0 +1,376 @@
+// ===== Benchmark Seed Data =====
+// South Indian packaged food manufacturing scenario
+import type {
+  Customer, Product, Material, Supplier, BOMHeader, BOMItem,
+  SalesOrder, Invoice, PurchaseReceipt, ProductionRun,
+  StockLedgerEntry, InventoryBalance, Payment, Expense,
+  Notification, AuditLogEntry, AppSettings,
+} from '@/lib/types';
+import { DEFAULT_SETTINGS } from '@/lib/constants';
+import { toPaise, toScaledQty } from '@/lib/utils';
+
+const ts = (offset = 0) => ({ seconds: (Date.now() - offset * 86400000) / 1000, nanoseconds: 0 } as any);
+
+// ===== Customers =====
+const customers: Customer[] = [
+  {
+    id: 'cust_retailer_a',
+    name: 'Retailer A — Sri Murugan Stores',
+    contactPerson: 'Murugavel K',
+    phone: '+91 94435 12345',
+    email: 'murugan@stores.in',
+    gstin: '33AADCS1234F1Z5',
+    billingAddress: { line1: '12 Main Road', city: 'Coimbatore', state: 'Tamil Nadu', pincode: '641001' },
+    state: 'Tamil Nadu',
+    customerType: 'retailer',
+    assignedSalesmanId: 'user_salesman_a',
+    creditLimitPaise: toPaise(50000),
+    outstandingPaise: 0,
+    isActive: true,
+    createdAt: ts(30),
+    updatedAt: ts(30),
+  },
+  {
+    id: 'cust_distributor_b',
+    name: 'Distributor B — Karnataka Foods Dist.',
+    contactPerson: 'Ramesh N',
+    phone: '+91 98451 67890',
+    email: 'karnataka@foods.in',
+    gstin: '29AADCD5678G1Z3',
+    billingAddress: { line1: '45 MG Road', city: 'Bengaluru', state: 'Karnataka', pincode: '560001' },
+    state: 'Karnataka',
+    customerType: 'distributor',
+    assignedSalesmanId: 'user_salesman_b',
+    creditLimitPaise: toPaise(100000),
+    outstandingPaise: 0,
+    isActive: true,
+    createdAt: ts(25),
+    updatedAt: ts(25),
+  },
+  {
+    id: 'cust_wholesale_c',
+    name: 'Wholesale C — Tamil Snacks Hub',
+    contactPerson: 'Senthil M',
+    phone: '+91 94431 24680',
+    email: 'tamilsnacks@hub.in',
+    gstin: '33AADCE9012H1Z1',
+    billingAddress: { line1: '78 Anna Salai', city: 'Chennai', state: 'Tamil Nadu', pincode: '600002' },
+    state: 'Tamil Nadu',
+    customerType: 'wholesale',
+    creditLimitPaise: toPaise(200000),
+    outstandingPaise: 0,
+    isActive: true,
+    createdAt: ts(20),
+    updatedAt: ts(20),
+  },
+];
+
+// ===== Products =====
+const products: Product[] = [
+  {
+    id: 'prod_murukku_200',
+    name: 'Murukku 200g',
+    code: 'MRK-200',
+    category: 'Snacks',
+    description: 'Crispy South Indian Murukku, 200g pack',
+    unitId: 'unit_pkt',
+    unitName: 'packets',
+    weightGrams: 200,
+    hsnCode: '19059040',
+    gstRatePercent: 5,
+    sellingPricePaise: toPaise(50),
+    mrpPaise: toPaise(60),
+    isActive: true,
+    createdAt: ts(60),
+    updatedAt: ts(60),
+  },
+  {
+    id: 'prod_mixture_250',
+    name: 'Mixture 250g',
+    code: 'MIX-250',
+    category: 'Snacks',
+    description: 'South Indian style mixture, 250g pack',
+    unitId: 'unit_pkt',
+    unitName: 'packets',
+    weightGrams: 250,
+    hsnCode: '19059040',
+    gstRatePercent: 5,
+    sellingPricePaise: toPaise(55),
+    mrpPaise: toPaise(65),
+    isActive: true,
+    createdAt: ts(60),
+    updatedAt: ts(60),
+  },
+  {
+    id: 'prod_banana_chips_150',
+    name: 'Banana Chips 150g',
+    code: 'BNC-150',
+    category: 'Chips',
+    description: 'Kerala style banana chips, 150g pack',
+    unitId: 'unit_pkt',
+    unitName: 'packets',
+    weightGrams: 150,
+    hsnCode: '20081920',
+    gstRatePercent: 12,
+    sellingPricePaise: toPaise(45),
+    mrpPaise: toPaise(55),
+    isActive: true,
+    createdAt: ts(60),
+    updatedAt: ts(60),
+  },
+  {
+    id: 'prod_sweets_500',
+    name: 'Assorted Sweets 500g',
+    code: 'SWT-500',
+    category: 'Sweets',
+    description: 'Traditional South Indian sweets assortment, 500g box',
+    unitId: 'unit_box',
+    unitName: 'boxes',
+    weightGrams: 500,
+    hsnCode: '17049090',
+    gstRatePercent: 5,
+    sellingPricePaise: toPaise(180),
+    mrpPaise: toPaise(220),
+    isActive: true,
+    createdAt: ts(60),
+    updatedAt: ts(60),
+  },
+];
+
+// ===== Raw Materials & Packaging =====
+const materials: Material[] = [
+  {
+    id: 'mat_flour',
+    name: 'Rice Flour',
+    code: 'RM-FLR',
+    type: 'raw_material',
+    unitId: 'unit_kg',
+    unitName: 'kg',
+    currentRatePaise: toPaise(42), // ₹42/kg
+    reorderLevel: toScaledQty(50),
+    currentStock: toScaledQty(100),
+    isActive: true,
+    createdAt: ts(60),
+    updatedAt: ts(1),
+  },
+  {
+    id: 'mat_oil',
+    name: 'Cooking Oil',
+    code: 'RM-OIL',
+    type: 'raw_material',
+    unitId: 'unit_l',
+    unitName: 'L',
+    currentRatePaise: toPaise(140), // ₹140/L
+    reorderLevel: toScaledQty(15),
+    currentStock: toScaledQty(30),
+    isActive: true,
+    createdAt: ts(60),
+    updatedAt: ts(1),
+  },
+  {
+    id: 'mat_spice',
+    name: 'Salt/Spice Mix',
+    code: 'RM-SPM',
+    type: 'raw_material',
+    unitId: 'unit_kg',
+    unitName: 'kg',
+    currentRatePaise: toPaise(200), // ₹200/kg
+    reorderLevel: toScaledQty(2),
+    currentStock: toScaledQty(5),
+    isActive: true,
+    createdAt: ts(60),
+    updatedAt: ts(1),
+  },
+  {
+    id: 'mat_pouch_200',
+    name: '200g Pouches',
+    code: 'PK-P200',
+    type: 'packaging_material',
+    unitId: 'unit_pcs',
+    unitName: 'pcs',
+    currentRatePaise: toPaise(2.50), // ₹2.50/pc
+    reorderLevel: toScaledQty(200),
+    currentStock: toScaledQty(500),
+    isActive: true,
+    createdAt: ts(60),
+    updatedAt: ts(1),
+  },
+  {
+    id: 'mat_carton',
+    name: 'Cartons',
+    code: 'PK-CTN',
+    type: 'packaging_material',
+    unitId: 'unit_pcs',
+    unitName: 'pcs',
+    currentRatePaise: toPaise(15), // ₹15/pc
+    reorderLevel: toScaledQty(10),
+    currentStock: toScaledQty(30),
+    isActive: true,
+    createdAt: ts(60),
+    updatedAt: ts(1),
+  },
+];
+
+// ===== BOM: Murukku 200g, batch of 200 =====
+const bomHeaders: BOMHeader[] = [
+  {
+    id: 'bom_murukku_200',
+    productId: 'prod_murukku_200',
+    productName: 'Murukku 200g',
+    batchSize: 200,
+    version: 1,
+    isActive: true,
+    createdAt: ts(50),
+    updatedAt: ts(50),
+  },
+];
+
+const bomItems: BOMItem[] = [
+  { id: 'bomi_1', bomHeaderId: 'bom_murukku_200', materialId: 'mat_flour', materialName: 'Rice Flour', materialUnit: 'kg', standardQuantity: toScaledQty(40), sortOrder: 1 },
+  { id: 'bomi_2', bomHeaderId: 'bom_murukku_200', materialId: 'mat_oil', materialName: 'Cooking Oil', materialUnit: 'L', standardQuantity: toScaledQty(10), sortOrder: 2 },
+  { id: 'bomi_3', bomHeaderId: 'bom_murukku_200', materialId: 'mat_spice', materialName: 'Salt/Spice Mix', materialUnit: 'kg', standardQuantity: toScaledQty(1.2), sortOrder: 3 },
+  { id: 'bomi_4', bomHeaderId: 'bom_murukku_200', materialId: 'mat_pouch_200', materialName: '200g Pouches', materialUnit: 'pcs', standardQuantity: toScaledQty(200), sortOrder: 4 },
+  { id: 'bomi_5', bomHeaderId: 'bom_murukku_200', materialId: 'mat_carton', materialName: 'Cartons', materialUnit: 'pcs', standardQuantity: toScaledQty(10), sortOrder: 5 },
+];
+
+// ===== Suppliers =====
+const suppliers: Supplier[] = [
+  {
+    id: 'sup_flour',
+    name: 'Chennai Rice Mills',
+    contactPerson: 'Ravi S',
+    phone: '+91 94440 11111',
+    gstin: '33AADCS1111A1Z1',
+    address: { line1: '15 Industrial Area', city: 'Chennai', state: 'Tamil Nadu', pincode: '600032' },
+    materials: ['mat_flour', 'mat_spice'],
+    isActive: true,
+    createdAt: ts(60),
+    updatedAt: ts(60),
+  },
+  {
+    id: 'sup_oil',
+    name: 'Coimbatore Oil Traders',
+    contactPerson: 'Ganesh P',
+    phone: '+91 94440 22222',
+    gstin: '33AADCS2222B1Z2',
+    address: { line1: '8 Market Street', city: 'Coimbatore', state: 'Tamil Nadu', pincode: '641018' },
+    materials: ['mat_oil'],
+    isActive: true,
+    createdAt: ts(60),
+    updatedAt: ts(60),
+  },
+  {
+    id: 'sup_packaging',
+    name: 'PackWell Industries',
+    contactPerson: 'Kumar L',
+    phone: '+91 94440 33333',
+    gstin: '33AADCS3333C1Z3',
+    address: { line1: '22 SIDCO Estate', city: 'Madurai', state: 'Tamil Nadu', pincode: '625020' },
+    materials: ['mat_pouch_200', 'mat_carton'],
+    isActive: true,
+    createdAt: ts(60),
+    updatedAt: ts(60),
+  },
+];
+
+// ===== Opening Inventory Balances =====
+const inventoryBalances: InventoryBalance[] = [
+  {
+    id: 'mat_flour', itemId: 'mat_flour', itemName: 'Rice Flour', itemType: 'raw_material',
+    currentStock: toScaledQty(100), unitName: 'kg',
+    weightedAvgRatePaise: toPaise(42), valuePaise: toPaise(4200),
+    reorderLevel: toScaledQty(50), isLowStock: false, updatedAt: ts(1),
+  },
+  {
+    id: 'mat_oil', itemId: 'mat_oil', itemName: 'Cooking Oil', itemType: 'raw_material',
+    currentStock: toScaledQty(30), unitName: 'L',
+    weightedAvgRatePaise: toPaise(140), valuePaise: toPaise(4200),
+    reorderLevel: toScaledQty(15), isLowStock: false, updatedAt: ts(1),
+  },
+  {
+    id: 'mat_spice', itemId: 'mat_spice', itemName: 'Salt/Spice Mix', itemType: 'raw_material',
+    currentStock: toScaledQty(5), unitName: 'kg',
+    weightedAvgRatePaise: toPaise(200), valuePaise: toPaise(1000),
+    reorderLevel: toScaledQty(2), isLowStock: false, updatedAt: ts(1),
+  },
+  {
+    id: 'mat_pouch_200', itemId: 'mat_pouch_200', itemName: '200g Pouches', itemType: 'packaging_material',
+    currentStock: toScaledQty(500), unitName: 'pcs',
+    weightedAvgRatePaise: toPaise(2.50), valuePaise: toPaise(1250),
+    reorderLevel: toScaledQty(200), isLowStock: false, updatedAt: ts(1),
+  },
+  {
+    id: 'mat_carton', itemId: 'mat_carton', itemName: 'Cartons', itemType: 'packaging_material',
+    currentStock: toScaledQty(30), unitName: 'pcs',
+    weightedAvgRatePaise: toPaise(15), valuePaise: toPaise(450),
+    reorderLevel: toScaledQty(10), isLowStock: false, updatedAt: ts(1),
+  },
+  {
+    id: 'prod_murukku_200', itemId: 'prod_murukku_200', itemName: 'Murukku 200g', itemType: 'finished_good',
+    currentStock: toScaledQty(50), unitName: 'packets',
+    weightedAvgRatePaise: 0, valuePaise: 0,
+    reorderLevel: toScaledQty(30), isLowStock: false, updatedAt: ts(1),
+  },
+];
+
+// Opening stock ledger entries
+const stockLedger: StockLedgerEntry[] = inventoryBalances.map((b) => ({
+  id: `stk_open_${b.itemId}`,
+  itemId: b.itemId,
+  itemName: b.itemName,
+  itemType: b.itemType,
+  movementType: 'opening_balance' as const,
+  quantityIn: b.currentStock,
+  quantityOut: 0,
+  previousBalance: 0,
+  newBalance: b.currentStock,
+  ratePaise: b.weightedAvgRatePaise,
+  valuePaise: b.valuePaise,
+  sourceDocumentId: 'OPENING',
+  sourceDocumentType: 'opening_balance',
+  userId: 'system',
+  remarks: 'Opening balance',
+  timestamp: ts(60),
+}));
+
+// ===== Assembled Seed State =====
+export const SEED_DATA = {
+  customers,
+  products,
+  materials,
+  suppliers,
+  bomHeaders,
+  bomItems,
+  salesOrders: [] as SalesOrder[],
+  invoices: [] as Invoice[],
+  purchaseOrders: [] as any[],
+  purchaseReceipts: [] as PurchaseReceipt[],
+  productionRuns: [] as ProductionRun[],
+  stockLedger,
+  inventoryBalances,
+  payments: [] as Payment[],
+  expenses: [] as Expense[],
+  notifications: [
+    {
+      id: 'notif_1',
+      type: 'low_stock' as const,
+      title: 'Low Stock Alert',
+      message: 'Spice Mix stock is running low (5 kg remaining)',
+      recipientId: 'user_owner',
+      isRead: false,
+      createdAt: ts(0),
+    },
+    {
+      id: 'notif_2',
+      type: 'new_order' as const,
+      title: 'Welcome to FoodFlow',
+      message: 'Your manufacturing management platform is ready. Start by creating a production run.',
+      recipientId: 'user_owner',
+      isRead: false,
+      createdAt: ts(0),
+    },
+  ] as Notification[],
+  auditLog: [] as AuditLogEntry[],
+  settings: DEFAULT_SETTINGS as AppSettings,
+};
+
