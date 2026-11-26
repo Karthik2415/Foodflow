@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import {
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   runTransaction,
@@ -67,12 +68,16 @@ export interface ActionResult {
 interface StoreActions {
   // Master Data
   createCustomer: (customer: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'outstandingPaise' | 'isActive'>) => Promise<string>;
+  deleteCustomer: (id: string) => Promise<ActionResult>;
   createProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => Promise<string>;
+  updateProduct: (id: string, updates: Partial<Omit<Product, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<ActionResult>;
   createMaterial: (
     material: Omit<Material, 'id' | 'createdAt' | 'updatedAt' | 'isActive' | 'currentStock'>,
     openingQty?: number,
     openingRatePaise?: number
   ) => Promise<string>;
+  deleteMaterial: (id: string) => Promise<ActionResult>;
   createSupplier: (supplier: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => Promise<string>;
   createBOM: (
     productId: string,
@@ -80,9 +85,12 @@ interface StoreActions {
     batchSize: number,
     items: { materialId: string; materialName: string; materialUnit: string; standardQuantity: number }[]
   ) => Promise<string>;
+  deleteBOM: (bomHeaderId: string) => Promise<ActionResult>;
   // Operations
   createPurchaseReceipt: (receipt: Omit<PurchaseReceipt, 'id' | 'createdAt'>) => Promise<ActionResult>;
   createProductionRun: (run: Partial<ProductionRun>) => string;
+  deleteProductionRun: (id: string) => Promise<ActionResult>;
+  deleteSalesOrder: (id: string) => Promise<ActionResult>;
   issueProductionMaterials: (runId: string, materials: { materialId: string; quantity: number }[]) => Promise<ActionResult>;
   completeProductionRun: (runId: string, goodOutput: number, rejectedOutput: number, damagedPackaging: number) => Promise<ActionResult>;
   createSalesOrder: (order: Partial<SalesOrder>) => string;
@@ -389,6 +397,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return id;
   }, [update, user]);
 
+  const updateProduct = useCallback(async (
+    id: string,
+    updates: Partial<Omit<Product, 'id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<void> => {
+    const nowTs = Timestamp.now();
+    if (isFirebaseConfigured && user) {
+      await updateDoc(doc(db, 'products', id), stripUndefined({ ...updates, updatedAt: nowTs }));
+      return;
+    }
+
+    update((prev) => ({
+      products: prev.products.map((p) =>
+        p.id === id ? { ...p, ...updates, updatedAt: nowTs as any } : p
+      ),
+    }));
+  }, [update, user]);
+
   const createMaterial = useCallback(async (
     material: Omit<Material, 'id' | 'createdAt' | 'updatedAt' | 'isActive' | 'currentStock'>,
     openingQty = 0,
@@ -508,6 +533,133 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }));
     return headerId;
   }, [update, user]);
+
+  const deleteProduct = useCallback(async (id: string): Promise<ActionResult> => {
+    const bal = state.inventoryBalances.find((b) => b.itemId === id);
+    if (bal && bal.currentStock > 0) {
+      return { ok: false, error: 'Cannot delete a product that still has warehouse stock.' };
+    }
+    if (isFirebaseConfigured && user) {
+      try {
+        await runTransaction(db, async (tx) => {
+          tx.delete(doc(db, 'products', id));
+          tx.delete(doc(db, 'inventoryBalances', id));
+        });
+        return { ok: true };
+      } catch (err: any) {
+        return { ok: false, error: err?.message || 'Failed to delete product.' };
+      }
+    }
+    update((prev) => ({
+      products: prev.products.filter((p) => p.id !== id),
+      inventoryBalances: prev.inventoryBalances.filter((b) => b.itemId !== id),
+    }));
+    return { ok: true };
+  }, [state.inventoryBalances, update, user]);
+
+  const deleteCustomer = useCallback(async (id: string): Promise<ActionResult> => {
+    const cust = state.customers.find((c) => c.id === id);
+    if (cust && (cust.outstandingPaise || 0) > 0) {
+      return { ok: false, error: 'Cannot delete a customer with an outstanding receivable balance.' };
+    }
+    if (isFirebaseConfigured && user) {
+      try {
+        await deleteDoc(doc(db, 'customers', id));
+        return { ok: true };
+      } catch (err: any) {
+        return { ok: false, error: err?.message || 'Failed to delete customer.' };
+      }
+    }
+    update((prev) => ({
+      customers: prev.customers.filter((c) => c.id !== id),
+    }));
+    return { ok: true };
+  }, [state.customers, update, user]);
+
+  const deleteMaterial = useCallback(async (id: string): Promise<ActionResult> => {
+    const mat = state.materials.find((m) => m.id === id);
+    const bal = state.inventoryBalances.find((b) => b.itemId === id);
+    if (bal && bal.currentStock > 0) {
+      return { ok: false, error: 'Cannot delete a material that still has warehouse stock.' };
+    }
+    const colName = mat?.type === 'packaging_material' ? 'packagingMaterials' : 'rawMaterials';
+    if (isFirebaseConfigured && user) {
+      try {
+        await runTransaction(db, async (tx) => {
+          tx.delete(doc(db, colName, id));
+          tx.delete(doc(db, 'inventoryBalances', id));
+        });
+        return { ok: true };
+      } catch (err: any) {
+        return { ok: false, error: err?.message || 'Failed to delete material.' };
+      }
+    }
+    update((prev) => ({
+      materials: prev.materials.filter((m) => m.id !== id),
+      inventoryBalances: prev.inventoryBalances.filter((b) => b.itemId !== id),
+    }));
+    return { ok: true };
+  }, [state.materials, state.inventoryBalances, update, user]);
+
+  const deleteBOM = useCallback(async (bomHeaderId: string): Promise<ActionResult> => {
+    const itemsToDelete = state.bomItems.filter((bi) => bi.bomHeaderId === bomHeaderId);
+    if (isFirebaseConfigured && user) {
+      try {
+        await runTransaction(db, async (tx) => {
+          tx.delete(doc(db, 'bomHeaders', bomHeaderId));
+          itemsToDelete.forEach((bi) => tx.delete(doc(db, 'bomItems', bi.id)));
+        });
+        return { ok: true };
+      } catch (err: any) {
+        return { ok: false, error: err?.message || 'Failed to delete BOM.' };
+      }
+    }
+    update((prev) => ({
+      bomHeaders: prev.bomHeaders.filter((bh) => bh.id !== bomHeaderId),
+      bomItems: prev.bomItems.filter((bi) => bi.bomHeaderId !== bomHeaderId),
+    }));
+    return { ok: true };
+  }, [state.bomItems, update, user]);
+
+  const deleteProductionRun = useCallback(async (id: string): Promise<ActionResult> => {
+    const run = state.productionRuns.find((r) => r.id === id);
+    if (!run) return { ok: false, error: 'Production run not found.' };
+    if (run.status !== 'planned') {
+      return { ok: false, error: 'Only planned production runs (before issuing materials) can be deleted.' };
+    }
+    if (isFirebaseConfigured && user) {
+      try {
+        await deleteDoc(doc(db, 'productionRuns', id));
+        return { ok: true };
+      } catch (err: any) {
+        return { ok: false, error: err?.message || 'Failed to delete production run.' };
+      }
+    }
+    update((prev) => ({
+      productionRuns: prev.productionRuns.filter((r) => r.id !== id),
+    }));
+    return { ok: true };
+  }, [state.productionRuns, update, user]);
+
+  const deleteSalesOrder = useCallback(async (id: string): Promise<ActionResult> => {
+    const order = state.salesOrders.find((o) => o.id === id);
+    if (!order) return { ok: false, error: 'Sales order not found.' };
+    if (order.status === 'invoiced' || order.status === 'dispatched' || order.status === 'completed') {
+      return { ok: false, error: 'Cannot delete an invoiced or dispatched order. Cancel the invoice instead.' };
+    }
+    if (isFirebaseConfigured && user) {
+      try {
+        await deleteDoc(doc(db, 'salesOrders', id));
+        return { ok: true };
+      } catch (err: any) {
+        return { ok: false, error: err?.message || 'Failed to delete sales order.' };
+      }
+    }
+    update((prev) => ({
+      salesOrders: prev.salesOrders.filter((o) => o.id !== id),
+    }));
+    return { ok: true };
+  }, [state.salesOrders, update, user]);
 
   // ===== PURCHASE RECEIPT (Atomic + Idempotent + Exact Weighted Avg) =====
   const createPurchaseReceipt = useCallback(async (
@@ -1581,12 +1733,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value: StoreContextType = {
     ...state,
     createCustomer,
+    deleteCustomer,
     createProduct,
+    updateProduct,
+    deleteProduct,
     createMaterial,
+    deleteMaterial,
     createSupplier,
     createBOM,
+    deleteBOM,
     createPurchaseReceipt,
     createProductionRun,
+    deleteProductionRun,
+    deleteSalesOrder,
     issueProductionMaterials,
     completeProductionRun,
     createSalesOrder,

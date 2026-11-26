@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '@/lib/store/store-context';
 import { useAuth } from '@/lib/auth/auth-context';
 import { PageHeader, Card, Button, StatusBadge, EmptyState, Modal, KPICard, NumericInput } from '@/components/ui';
+import { ProductThumbnail } from '@/components/ui/product-thumbnail';
 import { formatCurrency, fromScaledQty, toScaledQty, formatPercentage, calculateVariance } from '@/lib/utils';
 import { PRODUCTION_STATUS_CONFIG } from '@/lib/constants';
 import type { ProductionRun, ProductionMaterial } from '@/lib/types';
@@ -24,6 +25,8 @@ export default function ProductionPage() {
     issueProductionMaterials,
     completeProductionRun,
     getProductionCost,
+    deleteProductionRun,
+    deleteBOM,
   } = useStore();
   const { user } = useAuth();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -302,14 +305,33 @@ export default function ProductionPage() {
                         Batch Size: {run.batchSize} pkts
                       </span>
                     </div>
-                    <p className="text-sm font-semibold text-surface-700">
-                      Product: <strong className="text-surface-900 text-base">{run.productName}</strong> • Planned by {run.createdBy}
-                    </p>
+                    <div className="flex items-center gap-2.5">
+                      <ProductThumbnail
+                        imageUrl={products.find((p) => p.id === run.productId)?.imageUrl}
+                        name={run.productName}
+                        size="sm"
+                      />
+                      <p className="text-sm font-semibold text-surface-700">
+                        Product: <strong className="text-surface-900 text-base">{run.productName}</strong> • Planned by {run.createdBy}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Actions */}
                   <div className="flex items-center gap-3">
                     {run.status === 'planned' && (
+                      <>
+                      <button
+                        onClick={async () => {
+                          if (!window.confirm(`Delete production run ${run.runNumber}? This cannot be undone.`)) return;
+                          const res = await deleteProductionRun(run.id);
+                          if (!res.ok) setActionError(res.error || 'Cannot delete this production run.');
+                        }}
+                        className="p-2 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors"
+                        title="Delete Run"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                       <Button
                         variant="primary"
                         size="md"
@@ -318,6 +340,7 @@ export default function ProductionPage() {
                       >
                         Issue Materials & Start
                       </Button>
+                      </>
                     )}
 
                     {run.status === 'in_progress' && (
@@ -431,19 +454,35 @@ export default function ProductionPage() {
                 : 'Define ingredient and packaging recipes for your finished products'}
             </p>
           </div>
-          {bomHeaders.length > 1 && (
-            <select
-              value={displayedBOMHeader?.id || ''}
-              onChange={(e) => setViewingBomId(e.target.value)}
-              className="h-9 px-3 rounded-lg border border-surface-300 bg-white text-xs font-medium outline-none"
-            >
-              {bomHeaders.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.productName} (Batch: {b.batchSize})
-                </option>
-              ))}
-            </select>
-          )}
+          <div className="flex items-center gap-2">
+            {bomHeaders.length > 1 && (
+              <select
+                value={displayedBOMHeader?.id || ''}
+                onChange={(e) => setViewingBomId(e.target.value)}
+                className="h-9 px-3 rounded-lg border border-surface-300 bg-white text-xs font-medium outline-none"
+              >
+                {bomHeaders.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.productName} (Batch: {b.batchSize})
+                  </option>
+                ))}
+              </select>
+            )}
+            {displayedBOMHeader && (
+              <button
+                onClick={async () => {
+                  if (!window.confirm(`Delete BOM for "${displayedBOMHeader.productName}"? This cannot be undone.`)) return;
+                  const res = await deleteBOM(displayedBOMHeader.id);
+                  if (!res.ok) setActionError(res.error || 'Cannot delete this BOM.');
+                  else setViewingBomId('');
+                }}
+                className="p-2 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors"
+                title="Delete this BOM"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {!displayedBOMHeader ? (

@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '@/lib/store/store-context';
 import { PageHeader, Card, CardHeader, Button, Tabs, KPICard } from '@/components/ui';
+import { ProductThumbnail } from '@/components/ui/product-thumbnail';
 import { formatCurrency, fromScaledQty, toRupees, formatDate, formatPercentage, calculateVariance } from '@/lib/utils';
 import {
   BarChart3, Download, FileText, Package, Factory, IndianRupee,
@@ -18,6 +19,7 @@ export default function ReportsPage() {
     inventoryBalances,
     stockLedger,
     productionRuns,
+    products,
     customers,
     settings,
   } = useStore();
@@ -254,7 +256,16 @@ export default function ReportsPage() {
                 {productionRuns.map((r) => (
                   <tr key={r.id} className="hover:bg-surface-50">
                     <td className="px-4 py-3 font-mono font-bold text-surface-900">{r.runNumber}</td>
-                    <td className="px-4 py-3 font-medium text-surface-900">{r.productName}</td>
+                    <td className="px-4 py-3 font-medium text-surface-900">
+                      <div className="flex items-center gap-2.5">
+                        <ProductThumbnail
+                          imageUrl={products.find((p) => p.id === r.productId)?.imageUrl}
+                          name={r.productName}
+                          size="sm"
+                        />
+                        <span>{r.productName}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-right tabular-nums">{r.batchSize} pkts</td>
                     <td className="px-4 py-3 text-right font-bold tabular-nums text-success-700">
                       {fromScaledQty(r.goodOutput)} pkts

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/lib/store/store-context';
 import { useAuth } from '@/lib/auth/auth-context';
 import { PageHeader, Card, CardHeader, Button, StatusBadge, EmptyState, Modal, Tabs, KPICard, Input } from '@/components/ui';
+import { ProductThumbnail } from '@/components/ui/product-thumbnail';
 import { formatCurrency, fromScaledQty, formatDate } from '@/lib/utils';
 import { INVOICE_STATUS_CONFIG } from '@/lib/constants';
 import type { Invoice } from '@/lib/types';
@@ -14,7 +15,7 @@ import {
 } from 'lucide-react';
 
 export default function InvoicesPage() {
-  const { invoices, settings, cancelInvoice } = useStore();
+  const { invoices, products, settings, cancelInvoice } = useStore();
   const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState('all');
@@ -275,10 +276,17 @@ export default function InvoicesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-200">
-                  {selectedInvoice.items.map((item, idx) => (
+                  {selectedInvoice.items.map((item, idx) => {
+                    const prod = products.find((p) => p.id === item.productId);
+                    return (
                     <tr key={idx} className="hover:bg-surface-50/50">
                       <td className="px-4 py-3 text-surface-400 font-mono">{idx + 1}</td>
-                      <td className="px-4 py-3 font-semibold text-surface-900">{item.productName}</td>
+                      <td className="px-4 py-3 font-semibold text-surface-900">
+                        <div className="flex items-center gap-2.5">
+                          <ProductThumbnail imageUrl={prod?.imageUrl} name={item.productName} size="sm" />
+                          <span>{item.productName}</span>
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-surface-500 font-mono">{item.hsnCode}</td>
                       <td className="px-4 py-3 text-right font-bold tabular-nums">{fromScaledQty(item.quantity)} pkts</td>
                       <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(item.unitPricePaise)}</td>
@@ -288,7 +296,8 @@ export default function InvoicesPage() {
                       <td className="px-4 py-3 text-right tabular-nums">{item.igstPaise > 0 ? formatCurrency(item.igstPaise) : '—'}</td>
                       <td className="px-4 py-3 text-right font-bold text-surface-900 tabular-nums">{formatCurrency(item.totalPaise)}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

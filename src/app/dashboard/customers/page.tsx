@@ -4,13 +4,14 @@ import React, { useState } from 'react';
 import { useStore } from '@/lib/store/store-context';
 import { PageHeader, Card, Button, Modal, Input, Select, KPICard, EmptyState } from '@/components/ui';
 import { formatCurrency, toPaise } from '@/lib/utils';
-import { Users, Plus, Phone, MapPin, Building2, Search } from 'lucide-react';
+import { Users, Plus, Phone, MapPin, Building2, Search, Trash2 } from 'lucide-react';
 
 export default function CustomersPage() {
-  const { customers, createCustomer } = useStore();
+  const { customers, createCustomer, deleteCustomer } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [contactPerson, setContactPerson] = useState('');
@@ -77,6 +78,13 @@ export default function CustomersPage() {
         </Button>
       </PageHeader>
 
+      {deleteError && (
+        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center justify-between">
+          <span>{deleteError}</span>
+          <button type="button" onClick={() => setDeleteError(null)} className="underline ml-3 cursor-pointer">Dismiss</button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <KPICard title="Active Accounts" value={customers.length.toString()} icon={Users} />
         <KPICard
@@ -132,6 +140,7 @@ export default function CustomersPage() {
                   <th className="px-6 py-4">Contact</th>
                   <th className="px-6 py-4 text-right">Credit Limit</th>
                   <th className="px-6 py-4 text-right">Outstanding</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-200">
@@ -162,6 +171,21 @@ export default function CustomersPage() {
                       <span className={c.outstandingPaise > 0 ? 'text-primary-700' : 'text-emerald-700'}>
                         {formatCurrency(c.outstandingPaise)}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!window.confirm(`Delete customer "${c.name}"?`)) return;
+                          setDeleteError(null);
+                          const res = await deleteCustomer(c.id);
+                          if (!res.ok) setDeleteError(res.error || 'Could not delete customer.');
+                        }}
+                        title="Delete customer"
+                        className="p-2 rounded-lg text-surface-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}

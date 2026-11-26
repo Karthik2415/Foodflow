@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '@/lib/store/store-context';
 import { useAuth } from '@/lib/auth/auth-context';
 import { PageHeader, Card, CardHeader, KPICard, Button, Modal, EmptyState, NumericInput } from '@/components/ui';
+import { ProductThumbnail } from '@/components/ui/product-thumbnail';
 import { formatCurrency, fromScaledQty, toPaise } from '@/lib/utils';
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import type { ExpenseCategory } from '@/lib/types';
@@ -17,6 +18,7 @@ const COST_COLORS = ['#3457ed', '#f59e0b', '#10b981', '#6366f1'];
 export default function CostingPage() {
   const {
     productionRuns,
+    products,
     recordExpense,
     getProductionCost,
   } = useStore();
@@ -135,14 +137,21 @@ export default function CostingPage() {
           <div className="lg:col-span-7 space-y-6">
             <Card padding="none" className="overflow-hidden">
               <div className="border-b border-surface-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold text-surface-900 flex items-center gap-2">
-                    <Calculator className="h-4 w-4 text-primary-600" />
-                    Batch Cost Absorption Sheet — {activeRun.productName}
-                  </h3>
-                  <p className="text-xs text-surface-500 mt-0.5">
-                    Run {activeRun.runNumber} • Output: {activeCosting.goodPackets} Good Packets • Target: {activeRun.batchSize}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <ProductThumbnail
+                    imageUrl={products.find((p) => p.id === activeRun.productId)?.imageUrl}
+                    name={activeRun.productName}
+                    size="md"
+                  />
+                  <div>
+                    <h3 className="font-semibold text-surface-900 flex items-center gap-2">
+                      <Calculator className="h-4 w-4 text-primary-600" />
+                      Batch Cost Absorption Sheet — {activeRun.productName}
+                    </h3>
+                    <p className="text-xs text-surface-500 mt-0.5">
+                      Run {activeRun.runNumber} • Output: {activeCosting.goodPackets} Good Packets • Target: {activeRun.batchSize}
+                    </p>
+                  </div>
                 </div>
                 {productionRuns.length > 1 && (
                   <select

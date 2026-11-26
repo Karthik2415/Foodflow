@@ -4,21 +4,23 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '@/lib/store/store-context';
 import { PageHeader, Card, CardHeader, Button, StatusBadge, EmptyState, Tabs, Input, Select, Modal, KPICard } from '@/components/ui';
+import { ProductThumbnail } from '@/components/ui/product-thumbnail';
 import { formatCurrency, formatQuantity, fromScaledQty, toScaledQty, toPaise, toRupees, formatDate } from '@/lib/utils';
 import type { MaterialType } from '@/lib/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   Warehouse, Package, AlertTriangle, ArrowUpRight, ArrowDownRight,
-  Search, Filter, TrendingUp, TrendingDown, Layers, Archive, History, CheckCircle2, Plus
+  Search, Filter, TrendingUp, TrendingDown, Layers, Archive, History, CheckCircle2, Plus, Trash2
 } from 'lucide-react';
 
 export default function InventoryPage() {
-  const { inventoryBalances, stockLedger, materials, products, createMaterial, reconcileStockLedger } = useStore();
+  const { inventoryBalances, stockLedger, materials, products, createMaterial, reconcileStockLedger, deleteMaterial } = useStore();
 
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddMatOpen, setIsAddMatOpen] = useState(false);
   const [reconcileMsg, setReconcileMsg] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const [matName, setMatName] = useState('');
@@ -140,6 +142,16 @@ export default function InventoryPage() {
         </div>
       )}
 
+      {deleteError && (
+        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-medium flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+            <span>{deleteError}</span>
+          </div>
+          <button onClick={() => setDeleteError(null)} className="text-xs font-bold underline shrink-0">Dismiss</button>
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
@@ -231,14 +243,26 @@ export default function InventoryPage() {
                 <th className="px-6 py-4 text-right">Weighted Avg Rate</th>
                 <th className="px-6 py-4 text-right">Total Valuation</th>
                 <th className="px-6 py-4 text-center">Status</th>
+                <th className="px-6 py-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-200">
-              {filteredBalances.map((item) => (
+              {filteredBalances.map((item) => {
+                const matchedProd = item.itemType === 'finished_good'
+                  ? products.find((p) => p.id === item.itemId)
+                  : undefined;
+                return (
                 <tr key={item.id} className="hover:bg-surface-50/80 transition-colors">
                   <td className="px-6 py-4">
-                    <div className="font-bold text-surface-900 text-base">{item.itemName}</div>
-                    <div className="text-xs font-mono text-surface-400 mt-0.5">ID: {item.itemId}</div>
+                    <div className="flex items-center gap-3">
+                      {item.itemType === 'finished_good' && (
+                        <ProductThumbnail imageUrl={matchedProd?.imageUrl} name={item.itemName} size="md" />
+                      )}
+                      <div>
+                        <div className="font-bold text-surface-900 text-base">{item.itemName}</div>
+                        <div className="text-xs font-mono text-surface-400 mt-0.5">ID: {item.itemId}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className="capitalize text-xs px-3 py-1 rounded-full bg-surface-100 text-surface-700 font-semibold border border-surface-200">
@@ -272,8 +296,25 @@ export default function InventoryPage() {
                       </span>
                     )}
                   </td>
+                  <td className="px-6 py-4 text-center">
+                    {item.itemType !== 'finished_good' && item.currentStock === 0 && (
+                      <button
+                        onClick={async () => {
+                          if (!window.confirm(`Delete material "${item.itemName}"? This cannot be undone.`)) return;
+                          setDeleteError(null);
+                          const res = await deleteMaterial(item.itemId);
+                          if (!res.ok) setDeleteError(res.error || 'Cannot delete this material.');
+                        }}
+                        className="p-2 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors"
+                        title="Delete Material"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

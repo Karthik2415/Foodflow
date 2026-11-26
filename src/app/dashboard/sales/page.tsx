@@ -5,13 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/lib/store/store-context';
 import { useAuth } from '@/lib/auth/auth-context';
 import { PageHeader, Card, CardHeader, Button, StatusBadge, EmptyState, Input, Select, Modal, Tabs, KPICard, NumericInput } from '@/components/ui';
+import { ProductThumbnail } from '@/components/ui/product-thumbnail';
 import { formatCurrency, fromScaledQty, toScaledQty, toPaise, formatDate } from '@/lib/utils';
 import { ORDER_STATUS_CONFIG } from '@/lib/constants';
 import type { SalesOrder, SalesOrderItem, StockShortage } from '@/lib/types';
 import {
   ShoppingCart, Plus, Search, Filter, Eye, Check, X, AlertTriangle,
   ArrowRight, Package, User, ChevronDown, Truck, FileText, CheckCircle2,
-  Clock, ShieldAlert, Sparkles, Building2, MapPin, IndianRupee
+  Clock, ShieldAlert, Sparkles, Building2, MapPin, IndianRupee, Trash2
 } from 'lucide-react';
 
 export default function SalesOrdersPage() {
@@ -30,6 +31,7 @@ export default function SalesOrdersPage() {
     createInvoice,
     dispatchOrder,
     checkStockAvailability,
+    deleteSalesOrder,
   } = useStore();
   const { user } = useAuth();
 
@@ -350,15 +352,18 @@ export default function SalesOrdersPage() {
 
                   {/* Items Preview */}
                   <div className="flex items-center gap-2 flex-wrap pt-1">
-                    {order.items.map((item, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg bg-surface-100 text-surface-800 font-semibold border border-surface-200/80 shadow-xs"
-                      >
-                        <Package className="h-3.5 w-3.5 text-primary-600" />
-                        {fromScaledQty(item.quantity)} × {item.productName}
-                      </span>
-                    ))}
+                    {order.items.map((item, idx) => {
+                      const prod = products.find((p) => p.id === item.productId);
+                      return (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-2 text-xs px-2.5 py-1 rounded-lg bg-surface-100 text-surface-800 font-semibold border border-surface-200/80 shadow-xs"
+                        >
+                          <ProductThumbnail imageUrl={prod?.imageUrl} name={item.productName} size="xs" />
+                          {fromScaledQty(item.quantity)} × {item.productName}
+                        </span>
+                      );
+                    })}
                   </div>
 
                   {/* Shortage details inline if any */}
@@ -399,6 +404,21 @@ export default function SalesOrdersPage() {
                     >
                       Details
                     </Button>
+
+                    {/* Delete button for deletable statuses */}
+                    {['draft', 'submitted', 'under_review', 'approved', 'cancelled', 'rejected'].includes(order.status) && (
+                      <button
+                        onClick={async () => {
+                          if (!window.confirm(`Delete order ${order.orderNumber}? This cannot be undone.`)) return;
+                          const res = await deleteSalesOrder(order.id);
+                          if (!res.ok) setActionError(res.error || 'Cannot delete this order.');
+                        }}
+                        className="p-2 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors"
+                        title="Delete Order"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
 
                     {order.status === 'draft' && (
                       <Button
@@ -552,9 +572,16 @@ export default function SalesOrdersPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-200">
-                    {selectedOrder.items.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-surface-50">
-                        <td className="px-4 py-3 font-medium text-surface-900">{item.productName}</td>
+                    {selectedOrder.items.map((item, idx) => {
+                      const prod = products.find((p) => p.id === item.productId);
+                      return (
+                        <tr key={idx} className="hover:bg-surface-50">
+                          <td className="px-4 py-3 font-medium text-surface-900">
+                            <div className="flex items-center gap-2.5">
+                              <ProductThumbnail imageUrl={prod?.imageUrl} name={item.productName} size="sm" />
+                              <span>{item.productName}</span>
+                            </div>
+                          </td>
                         <td className="px-4 py-3 text-right tabular-nums">{fromScaledQty(item.quantity)} pkts</td>
                         <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(item.unitPricePaise)}</td>
                         <td className="px-4 py-3 text-right tabular-nums">{item.gstRatePercent}%</td>
@@ -562,7 +589,8 @@ export default function SalesOrdersPage() {
                           {formatCurrency(item.amountPaise)}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -674,21 +702,28 @@ export default function SalesOrdersPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
                     <div className="sm:col-span-6">
                       <label className="text-xs text-surface-500 block mb-1">Product</label>
-                      <select
-                        value={item.productId}
-                        onChange={(e) => {
-                          const updated = [...orderItems];
-                          updated[index].productId = e.target.value;
-                          setOrderItems(updated);
-                        }}
-                        className="w-full h-9 px-3 rounded-lg border border-surface-300 bg-white text-sm outline-none"
-                      >
-                        {products.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} ({formatCurrency(p.sellingPricePaise)}/pkt)
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex items-center gap-2">
+                        <ProductThumbnail
+                          imageUrl={selectedProduct?.imageUrl}
+                          name={selectedProduct?.name || 'Product'}
+                          size="md"
+                        />
+                        <select
+                          value={item.productId}
+                          onChange={(e) => {
+                            const updated = [...orderItems];
+                            updated[index].productId = e.target.value;
+                            setOrderItems(updated);
+                          }}
+                          className="w-full h-9 px-3 rounded-lg border border-surface-300 bg-white text-sm outline-none"
+                        >
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} ({formatCurrency(p.sellingPricePaise)}/pkt)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
                     <div className="sm:col-span-4">
