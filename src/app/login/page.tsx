@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/lib/auth/auth-context';
 import { Button, Input, Select } from '@/components/ui';
@@ -67,10 +68,7 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--color-info-900)_0%,_transparent_50%)]" />
         <div className="relative z-10 flex flex-col justify-between p-12">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm">
-              <Factory className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-semibold text-white">{APP_NAME}</span>
+            <Image src="/logo.png" alt="FoodFlow" width={220} height={70} className="object-contain" priority />
           </div>
 
           <motion.div
@@ -111,10 +109,7 @@ export default function LoginPage() {
         >
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600">
-              <Factory className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-semibold text-surface-900">{APP_NAME}</span>
+            <Image src="/logo.png" alt="FoodFlow" width={180} height={56} className="object-contain" />
           </div>
 
           {/* Connection Status Pill */}

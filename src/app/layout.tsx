@@ -12,7 +12,14 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'FoodFlow — Order-to-Audit Management',
   description: 'Enterprise-grade manufacturing management platform for South Indian packaged food companies',
-  icons: { icon: '/favicon.ico' },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({

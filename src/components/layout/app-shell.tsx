@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { APP_NAME, NAV_GROUPS } from '@/lib/constants';
@@ -185,27 +186,16 @@ export function AppShell({
       >
         {/* Brand Header */}
         <div className="flex h-18 items-center gap-3.5 border-b border-surface-200/90 px-5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900 text-white font-extrabold text-base shadow-md shadow-primary-600/25 ring-1 ring-white/20">
-            FF
+          <div className="shrink-0">
+            <Image
+              src="/logo.png"
+              alt="FoodFlow"
+              width={sidebarCollapsed ? 40 : 160}
+              height={sidebarCollapsed ? 40 : 50}
+              className="object-contain transition-all duration-200"
+              priority
+            />
           </div>
-          <AnimatePresence>
-            {!sidebarCollapsed && (
-              <motion.div
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -8 }}
-                transition={{ duration: 0.15 }}
-                className="min-w-0"
-              >
-                <span className="text-lg font-extrabold tracking-tight text-surface-900 block leading-tight">
-                  {APP_NAME}
-                </span>
-                <span className="text-[11px] font-semibold text-primary-600 uppercase tracking-wider block">
-                  Enterprise ERP
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
 
         {/* Navigation Items (Grouped & Collapsible) */}
@@ -511,10 +501,7 @@ export function AppShell({
             >
               <div className="flex h-16 items-center justify-between border-b border-surface-200 px-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-600 to-primary-800 text-white font-extrabold text-sm">
-                    FF
-                  </div>
-                  <span className="text-base font-extrabold text-surface-900">{APP_NAME}</span>
+                  <Image src="/logo.png" alt="FoodFlow" width={120} height={36} className="object-contain" />
                 </div>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
