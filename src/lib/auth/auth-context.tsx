@@ -123,13 +123,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser({
             id: firebaseUser.uid,
             ...data,
-            role: claimRole || data.role || 'owner',
+            role: claimRole || data.role || 'salesman',
           });
         } else {
           const newProfile: Omit<AppUser, 'id'> = {
             email: firebaseUser.email || '',
             displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-            role: claimRole || 'owner',
+            role: claimRole || 'salesman',
             isActive: true,
             createdAt: serverTimestamp() as any,
             updatedAt: serverTimestamp() as any,
@@ -143,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: firebaseUser.uid,
           email: firebaseUser.email || '',
           displayName: firebaseUser.displayName || 'User',
-          role: 'owner',
+          role: 'salesman',
           isActive: true,
           createdAt: null as any,
           updatedAt: null as any,
@@ -200,10 +200,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(cred.user, { displayName });
+      // Self-registered accounts always start with least-privilege 'salesman' role in live Firebase;
+      // an Owner/Admin can promote roles in Firestore or via setUserRole.
+      const assignedRole: UserRole = 'salesman';
       const userProfile: Omit<AppUser, 'id'> = {
         email,
         displayName,
-        role,
+        role: assignedRole,
         isActive: true,
         createdAt: serverTimestamp() as any,
         updatedAt: serverTimestamp() as any,
@@ -219,25 +222,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const switchRole = useCallback(async (role: UserRole) => {
+    // Role switching is only permitted in local Demo Mode
+    if (isFirebaseConfigured) return;
     setUser((prev) => {
       if (!prev) return prev;
       const updated = { ...prev, role };
-      if (!isFirebaseConfigured) {
-        localStorage.setItem('foodflow_user', JSON.stringify(updated));
-      }
+      localStorage.setItem('foodflow_user', JSON.stringify(updated));
       return updated;
     });
-    if (isFirebaseConfigured && auth.currentUser) {
-      try {
-        await setDoc(
-          doc(db, 'users', auth.currentUser.uid),
-          { role, updatedAt: serverTimestamp() },
-          { merge: true }
-        );
-      } catch (err) {
-        console.error('Failed to persist role switch:', err);
-      }
-    }
   }, []);
 
   const logout = useCallback(async () => {

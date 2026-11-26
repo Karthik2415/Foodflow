@@ -153,12 +153,9 @@ export function AppShell({
   }, []);
 
   const handleSwitchRole = async (role: UserRole, email: string) => {
+    if (isLiveFirebase) return;
     try {
-      if (isLiveFirebase) {
-        await switchRole(role);
-      } else {
-        await login(email, 'demo');
-      }
+      await login(email, 'demo');
       setRoleSwitcherOpen(false);
     } catch {}
   };
@@ -349,61 +346,71 @@ export function AppShell({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Quick Role Switcher Dropdown */}
-            <div ref={roleSwitcherRef} className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setRoleSwitcherOpen((prev) => !prev);
-                  setNotificationsOpen(false);
-                }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-surface-200 bg-surface-50 hover:bg-surface-100 text-xs font-bold text-surface-700 transition-all shadow-sm cursor-pointer"
+            {/* Role Badge (Live Firebase) / Quick Role Switcher (Demo Mode only) */}
+            {isLiveFirebase ? (
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-surface-200 bg-surface-50 text-xs font-bold text-surface-700 shadow-xs"
+                title="Role is assigned by your administrator"
               >
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 <span className="capitalize">Role: {activeRole.replace('_', ' ')}</span>
-                <ChevronDown className="h-3.5 w-3.5 text-surface-400" />
-              </button>
+              </div>
+            ) : (
+              <div ref={roleSwitcherRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRoleSwitcherOpen((prev) => !prev);
+                    setNotificationsOpen(false);
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-surface-200 bg-surface-50 hover:bg-surface-100 text-xs font-bold text-surface-700 transition-all shadow-sm cursor-pointer"
+                >
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="capitalize">Role: {activeRole.replace('_', ' ')}</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-surface-400" />
+                </button>
 
-              <AnimatePresence>
-                {roleSwitcherOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-surface-200 shadow-dropdown p-2 z-50"
-                  >
-                    <div className="px-3 py-2 border-b border-surface-100">
-                      <p className="text-xs font-extrabold text-surface-900">Switch Role View</p>
-                      <p className="text-[11px] text-surface-400">Preview role-tailored ERP navigation & workflows</p>
-                    </div>
-                    <div className="space-y-1 pt-1.5">
-                      {ROLE_DETAILS.map((r) => (
-                        <button
-                          key={r.role}
-                          type="button"
-                          onClick={() => handleSwitchRole(r.role, r.email)}
-                          className={cn(
-                            'w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors cursor-pointer',
-                            activeRole === r.role
-                              ? 'bg-primary-50 text-primary-700 font-bold'
-                              : 'hover:bg-surface-50 text-surface-700 font-medium'
-                          )}
-                        >
-                          <div>
-                            <p className="font-semibold text-surface-900">{r.label}</p>
-                            <p className="text-[10px] text-surface-400">{r.desc}</p>
-                          </div>
-                          {activeRole === r.role && (
-                            <CheckCircle2 className="h-4 w-4 text-primary-600 shrink-0" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                <AnimatePresence>
+                  {roleSwitcherOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-surface-200 shadow-dropdown p-2 z-50"
+                    >
+                      <div className="px-3 py-2 border-b border-surface-100">
+                        <p className="text-xs font-extrabold text-surface-900">Switch Demo Role View</p>
+                        <p className="text-[11px] text-surface-400">Preview role-tailored ERP navigation & workflows</p>
+                      </div>
+                      <div className="space-y-1 pt-1.5">
+                        {ROLE_DETAILS.map((r) => (
+                          <button
+                            key={r.role}
+                            type="button"
+                            onClick={() => handleSwitchRole(r.role, r.email)}
+                            className={cn(
+                              'w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors cursor-pointer',
+                              activeRole === r.role
+                                ? 'bg-primary-50 text-primary-700 font-bold'
+                                : 'hover:bg-surface-50 text-surface-700 font-medium'
+                            )}
+                          >
+                            <div>
+                              <p className="font-semibold text-surface-900">{r.label}</p>
+                              <p className="text-[10px] text-surface-400">{r.desc}</p>
+                            </div>
+                            {activeRole === r.role && (
+                              <CheckCircle2 className="h-4 w-4 text-primary-600 shrink-0" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
 
             {/* Notifications Popover */}
             <div ref={notificationsRef} className="relative">
