@@ -68,7 +68,10 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--color-info-900)_0%,_transparent_50%)]" />
         <div className="relative z-10 flex flex-col justify-between p-12">
           <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="FoodFlow" width={220} height={70} className="object-contain" priority />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm">
+              <Factory className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-xl font-semibold text-white">{APP_NAME}</span>
           </div>
 
           <motion.div
@@ -100,17 +103,18 @@ export default function LoginPage() {
       </div>
 
       {/* Right side — Login Form */}
-      <div className="flex w-full lg:w-1/2 items-center justify-center p-6">
+      <div className="relative flex w-full lg:w-1/2 items-center justify-center p-6 pt-24 sm:pt-6">
+        {/* Top-right Logo */}
+        <div className="absolute top-6 right-6 z-10">
+          <Image src="/logo.png" alt="FoodFlow" width={180} height={56} className="object-contain" priority />
+        </div>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           className="w-full max-w-md"
         >
-          {/* Mobile logo */}
-          <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <Image src="/logo.png" alt="FoodFlow" width={180} height={56} className="object-contain" />
-          </div>
 
           {/* Connection Status Pill — only shown in Demo Mode */}
           {!isLiveFirebase && (
