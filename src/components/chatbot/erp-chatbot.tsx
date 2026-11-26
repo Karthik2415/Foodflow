@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/lib/store/store-context';
 import { useAuth } from '@/lib/auth/auth-context';
 import { fromScaledQty, toRupees, cn } from '@/lib/utils';
 import {
-  Bot, X, Send, Sparkles, MessageSquare, Loader2, RotateCcw
+  Bot, X, Send, Sparkles, MessageSquare, Loader2, Plus
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -21,6 +21,33 @@ const QUICK_PROMPTS = [
   'Sales & receivables summary',
   'How do I run a production batch?',
 ];
+
+const WELCOME_MESSAGE: ChatMessage = {
+  id: 'welcome',
+  role: 'assistant',
+  content:
+    'Hi! I am **FoodFlow AI**. Ask me to estimate raw materials for a Murukku batch, predict production capacity from your current stock, or guide you through any ERP step.',
+};
+
+const STORAGE_KEY = 'foodflow-chat-history';
+
+function loadSavedMessages(): ChatMessage[] {
+  if (typeof window === 'undefined') return [WELCOME_MESSAGE];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return [WELCOME_MESSAGE];
+}
+
+function saveMessages(msgs: ChatMessage[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(msgs));
+  } catch {}
+}
 
 export function ErpChatbot() {
   const {
@@ -42,14 +69,12 @@ export function ErpChatbot() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'gemini' | 'smart-erp'>('gemini');
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content:
-        'Hi! I am **FoodFlow AI**. Ask me to estimate raw materials for a Murukku batch, predict production capacity from your current stock, or guide you through any ERP step.',
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>(loadSavedMessages);
+
+  // Persist messages to localStorage whenever they change
+  useEffect(() => {
+    saveMessages(messages);
+  }, [messages]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -233,10 +258,11 @@ export function ErpChatbot() {
                       },
                     ])
                   }
-                  title="Reset conversation"
-                  className="p-1.5 rounded-lg text-white/80 hover:bg-white/15 hover:text-white transition-colors cursor-pointer"
+                  title="Start new chat"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-white/90 hover:bg-white/15 hover:text-white transition-colors cursor-pointer"
                 >
-                  <RotateCcw className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>New Chat</span>
                 </button>
                 <button
                   type="button"
