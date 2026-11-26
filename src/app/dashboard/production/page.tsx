@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '@/lib/store/store-context';
 import { useAuth } from '@/lib/auth/auth-context';
-import { PageHeader, Card, Button, StatusBadge, EmptyState, Modal, KPICard } from '@/components/ui';
+import { PageHeader, Card, Button, StatusBadge, EmptyState, Modal, KPICard, NumericInput } from '@/components/ui';
 import { formatCurrency, fromScaledQty, toScaledQty, formatPercentage, calculateVariance } from '@/lib/utils';
 import { PRODUCTION_STATUS_CONFIG } from '@/lib/constants';
 import type { ProductionRun, ProductionMaterial } from '@/lib/types';
@@ -531,12 +531,12 @@ export default function ProductionPage() {
 
                 <div>
                   <label className="text-sm font-medium text-surface-700 block mb-1">Standard Batch Size (packets) *</label>
-                  <input
-                    type="number"
+                  <NumericInput
                     min="1"
                     required
                     value={bomBatchSize}
-                    onChange={(e) => setBomBatchSize(parseInt(e.target.value) || 1)}
+                    onValueChange={(val) => setBomBatchSize(Math.round(val))}
+                    placeholder="100"
                     className="w-full h-10 px-3 rounded-lg border border-surface-300 bg-white text-sm outline-none tabular-nums"
                   />
                 </div>
@@ -583,17 +583,17 @@ export default function ProductionPage() {
                           </select>
                         </div>
                         <div className="col-span-4 flex items-center gap-1.5">
-                          <input
-                            type="number"
+                          <NumericInput
                             step="any"
                             min="0.001"
                             required
                             value={row.quantity}
-                            onChange={(e) => {
+                            onValueChange={(val) => {
                               const next = [...bomRows];
-                              next[idx].quantity = parseFloat(e.target.value) || 0;
+                              next[idx].quantity = val;
                               setBomRows(next);
                             }}
+                            placeholder="0"
                             className="w-full h-9 px-2.5 rounded-lg border border-surface-300 bg-white text-sm tabular-nums text-right outline-none"
                           />
                           <span className="text-xs text-surface-500 w-10 shrink-0">
@@ -667,11 +667,11 @@ export default function ProductionPage() {
 
               <div>
                 <label className="text-sm font-medium text-surface-700 block mb-1">Planned Batch Size (packets)</label>
-                <input
-                  type="number"
+                <NumericInput
                   min="1"
                   value={batchSize}
-                  onChange={(e) => setBatchSize(parseInt(e.target.value) || 1)}
+                  onValueChange={(val) => setBatchSize(Math.round(val))}
+                  placeholder="100"
                   className="w-full h-10 px-3 rounded-lg border border-surface-300 bg-white text-sm outline-none tabular-nums"
                 />
                 <p className="text-xs text-surface-500 mt-1">
@@ -724,16 +724,16 @@ export default function ProductionPage() {
                   <span className="text-xs text-surface-400 block">Unit: {mat.materialUnit}</span>
                 </div>
                 <div className="w-32">
-                  <input
-                    type="number"
+                  <NumericInput
                     step="any"
                     value={issueInputs[mat.materialId] ?? fromScaledQty(mat.quantity)}
-                    onChange={(e) =>
+                    onValueChange={(val) =>
                       setIssueInputs({
                         ...issueInputs,
-                        [mat.materialId]: parseFloat(e.target.value) || 0,
+                        [mat.materialId]: val,
                       })
                     }
+                    placeholder="0"
                     className="w-full h-8 px-2.5 rounded border border-surface-300 text-sm font-semibold tabular-nums text-right outline-none"
                   />
                 </div>
@@ -763,22 +763,22 @@ export default function ProductionPage() {
         <form onSubmit={handleCompletionSubmit} className="space-y-4">
           <div>
             <label className="text-sm font-medium text-surface-700 block mb-1">Good Output (packets to inventory)</label>
-            <input
-              type="number"
+            <NumericInput
               min="0"
               value={goodOutput}
-              onChange={(e) => setGoodOutput(parseInt(e.target.value) || 0)}
+              onValueChange={(val) => setGoodOutput(Math.round(val))}
+              placeholder="0"
               className="w-full h-10 px-3 rounded-lg border border-surface-300 text-base font-bold tabular-nums outline-none text-success-700"
             />
           </div>
 
           <div>
             <label className="text-sm font-medium text-surface-700 block mb-1">Damaged Pouches / Packaging Loss</label>
-            <input
-              type="number"
+            <NumericInput
               min="0"
               value={damagedPackaging}
-              onChange={(e) => setDamagedPackaging(parseInt(e.target.value) || 0)}
+              onValueChange={(val) => setDamagedPackaging(Math.round(val))}
+              placeholder="0"
               className="w-full h-10 px-3 rounded-lg border border-surface-300 text-base font-bold tabular-nums outline-none text-error-600"
             />
           </div>

@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/lib/store/store-context';
 import { useAuth } from '@/lib/auth/auth-context';
-import { PageHeader, Card, CardHeader, Button, StatusBadge, EmptyState, Input, Select, Modal, Tabs, KPICard } from '@/components/ui';
+import { PageHeader, Card, CardHeader, Button, StatusBadge, EmptyState, Input, Select, Modal, Tabs, KPICard, NumericInput } from '@/components/ui';
 import { formatCurrency, fromScaledQty, toScaledQty, toPaise, formatDate } from '@/lib/utils';
 import { ORDER_STATUS_CONFIG } from '@/lib/constants';
 import type { SalesOrder, SalesOrderItem, StockShortage } from '@/lib/types';
@@ -693,15 +693,15 @@ export default function SalesOrdersPage() {
 
                     <div className="sm:col-span-4">
                       <label className="text-xs text-surface-500 block mb-1">Quantity (packets)</label>
-                      <input
-                        type="number"
+                      <NumericInput
                         min="1"
                         value={item.quantity}
-                        onChange={(e) => {
+                        onValueChange={(val) => {
                           const updated = [...orderItems];
-                          updated[index].quantity = parseInt(e.target.value) || 0;
+                          updated[index].quantity = Math.round(val);
                           setOrderItems(updated);
                         }}
+                        placeholder="0"
                         className="w-full h-9 px-3 rounded-lg border border-surface-300 bg-white text-sm outline-none tabular-nums"
                       />
                     </div>

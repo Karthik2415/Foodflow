@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '@/lib/store/store-context';
 import { useAuth } from '@/lib/auth/auth-context';
-import { PageHeader, Card, CardHeader, KPICard, Button, Modal, EmptyState } from '@/components/ui';
+import { PageHeader, Card, CardHeader, KPICard, Button, Modal, EmptyState, NumericInput } from '@/components/ui';
 import { formatCurrency, fromScaledQty, toPaise } from '@/lib/utils';
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import type { ExpenseCategory } from '@/lib/types';
@@ -392,13 +392,12 @@ export default function CostingPage() {
 
           <div>
             <label className="text-sm font-medium text-surface-700 block mb-1">Amount (₹ Rupees)</label>
-            <input
-              type="number"
+            <NumericInput
               min="1"
               step="any"
               required
-              value={expenseAmount || ''}
-              onChange={(e) => setExpenseAmount(parseFloat(e.target.value) || 0)}
+              value={expenseAmount}
+              onValueChange={setExpenseAmount}
               placeholder="e.g. 1200"
               className="w-full h-10 px-3 rounded-lg border border-surface-300 text-base font-bold tabular-nums outline-none text-surface-900"
             />

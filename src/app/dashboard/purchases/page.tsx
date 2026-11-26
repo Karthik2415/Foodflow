@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/lib/store/store-context';
 import { useAuth } from '@/lib/auth/auth-context';
-import { PageHeader, Card, CardHeader, Button, EmptyState, Modal, Input, Select, KPICard } from '@/components/ui';
+import { PageHeader, Card, CardHeader, Button, EmptyState, Modal, Input, Select, KPICard, NumericInput } from '@/components/ui';
 import { formatCurrency, fromScaledQty, toScaledQty, toPaise, formatDate } from '@/lib/utils';
 import type { PurchaseReceipt } from '@/lib/types';
 import {
@@ -344,32 +344,32 @@ export default function PurchasesPage() {
 
                 <div className="sm:col-span-3">
                   <label className="text-xs text-surface-500 block mb-1">Quantity</label>
-                  <input
-                    type="number"
-                    min="1"
+                  <NumericInput
+                    min="0.001"
                     step="any"
                     value={item.quantity}
-                    onChange={(e) => {
+                    onValueChange={(val) => {
                       const updated = [...receiptItems];
-                      updated[idx].quantity = parseFloat(e.target.value) || 0;
+                      updated[idx].quantity = val;
                       setReceiptItems(updated);
                     }}
+                    placeholder="0"
                     className="w-full h-9 px-3 rounded-lg border border-surface-300 bg-white text-sm outline-none tabular-nums"
                   />
                 </div>
 
                 <div className="sm:col-span-3">
                   <label className="text-xs text-surface-500 block mb-1">Rate (₹ / unit)</label>
-                  <input
-                    type="number"
+                  <NumericInput
                     min="0"
                     step="any"
                     value={item.rate}
-                    onChange={(e) => {
+                    onValueChange={(val) => {
                       const updated = [...receiptItems];
-                      updated[idx].rate = parseFloat(e.target.value) || 0;
+                      updated[idx].rate = val;
                       setReceiptItems(updated);
                     }}
+                    placeholder="0"
                     className="w-full h-9 px-3 rounded-lg border border-surface-300 bg-white text-sm outline-none tabular-nums"
                   />
                 </div>

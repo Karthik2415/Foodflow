@@ -72,6 +72,7 @@ interface AuthContextType {
   isLiveFirebase: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string, role: UserRole) => Promise<void>;
+  switchRole: (role: UserRole) => Promise<void>;
   logout: () => Promise<void>;
   error: string | null;
 }
@@ -82,6 +83,7 @@ const AuthContext = createContext<AuthContextType>({
   isLiveFirebase: isFirebaseConfigured,
   login: async () => {},
   register: async () => {},
+  switchRole: async () => {},
   logout: async () => {},
   error: null,
 });
@@ -216,6 +218,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const switchRole = useCallback(async (role: UserRole) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, role };
+      if (!isFirebaseConfigured) {
+        localStorage.setItem('foodflow_user', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    if (isFirebaseConfigured && auth.currentUser) {
+      try {
+        await setDoc(
+          doc(db, 'users', auth.currentUser.uid),
+          { role, updatedAt: serverTimestamp() },
+          { merge: true }
+        );
+      } catch (err) {
+        console.error('Failed to persist role switch:', err);
+      }
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     if (!isFirebaseConfigured) {
       setUser(null);
@@ -227,7 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, isLiveFirebase: isFirebaseConfigured, login, register, logout, error }}>
+    <AuthContext.Provider value={{ user, loading, isLiveFirebase: isFirebaseConfigured, login, register, switchRole, logout, error }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { APP_NAME, NAV_GROUPS } from '@/lib/constants';
 import type { UserRole } from '@/lib/types';
 import { OfflineIndicator } from '@/components/layout/offline-indicator';
+import { ErpChatbot } from '@/components/chatbot/erp-chatbot';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useStore } from '@/lib/store/store-context';
 import {
@@ -83,10 +84,12 @@ export function AppShell({
   userName = 'Demo User',
   userEmail = 'demo@foodflow.in',
 }: AppShellProps) {
-  const { user, login, logout, isLiveFirebase } = useAuth();
+  const { user, login, switchRole, logout, isLiveFirebase } = useAuth();
   const { notifications } = useStore();
   const router = useRouter();
   const pathname = usePathname();
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const roleSwitcherRef = useRef<HTMLDivElement>(null);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
@@ -130,9 +133,32 @@ export function AppShell({
     setCommandPaletteOpen(false);
   }, [pathname]);
 
-  const handleSwitchRole = async (email: string) => {
+  // Close popovers when clicking anywhere outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (notificationsRef.current && !notificationsRef.current.contains(target)) {
+        setNotificationsOpen(false);
+      }
+      if (roleSwitcherRef.current && !roleSwitcherRef.current.contains(target)) {
+        setRoleSwitcherOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
+
+  const handleSwitchRole = async (role: UserRole, email: string) => {
     try {
-      await login(email, 'demo');
+      if (isLiveFirebase) {
+        await switchRole(role);
+      } else {
+        await login(email, 'demo');
+      }
       setRoleSwitcherOpen(false);
     } catch {}
   };
@@ -323,20 +349,18 @@ export function AppShell({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Role Badge (Live Firebase) or Quick Role Switcher (Demo Mode only) */}
-            {isLiveFirebase ? (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-surface-200 bg-surface-50 text-xs font-bold text-surface-700">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span className="capitalize">{(user?.role || userRole).replace('_', ' ')}</span>
-              </div>
-            ) : (
-            <div className="relative">
+            {/* Quick Role Switcher Dropdown */}
+            <div ref={roleSwitcherRef} className="relative">
               <button
-                onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-surface-200 bg-surface-50 hover:bg-surface-100 text-xs font-bold text-surface-700 transition-all shadow-sm"
+                type="button"
+                onClick={() => {
+                  setRoleSwitcherOpen((prev) => !prev);
+                  setNotificationsOpen(false);
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-surface-200 bg-surface-50 hover:bg-surface-100 text-xs font-bold text-surface-700 transition-all shadow-sm cursor-pointer"
               >
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="capitalize">Role: {(user?.role || userRole).replace('_', ' ')}</span>
+                <span className="capitalize">Role: {activeRole.replace('_', ' ')}</span>
                 <ChevronDown className="h-3.5 w-3.5 text-surface-400" />
               </button>
 
@@ -350,17 +374,18 @@ export function AppShell({
                     className="absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-surface-200 shadow-dropdown p-2 z-50"
                   >
                     <div className="px-3 py-2 border-b border-surface-100">
-                      <p className="text-xs font-extrabold text-surface-900">Switch Application Persona</p>
-                      <p className="text-[11px] text-surface-400">Demo mode persona switcher</p>
+                      <p className="text-xs font-extrabold text-surface-900">Switch Role View</p>
+                      <p className="text-[11px] text-surface-400">Preview role-tailored ERP navigation & workflows</p>
                     </div>
                     <div className="space-y-1 pt-1.5">
                       {ROLE_DETAILS.map((r) => (
                         <button
-                          key={r.email}
-                          onClick={() => handleSwitchRole(r.email)}
+                          key={r.role}
+                          type="button"
+                          onClick={() => handleSwitchRole(r.role, r.email)}
                           className={cn(
-                            'w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors',
-                            user?.email === r.email
+                            'w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors cursor-pointer',
+                            activeRole === r.role
                               ? 'bg-primary-50 text-primary-700 font-bold'
                               : 'hover:bg-surface-50 text-surface-700 font-medium'
                           )}
@@ -369,7 +394,7 @@ export function AppShell({
                             <p className="font-semibold text-surface-900">{r.label}</p>
                             <p className="text-[10px] text-surface-400">{r.desc}</p>
                           </div>
-                          {user?.email === r.email && (
+                          {activeRole === r.role && (
                             <CheckCircle2 className="h-4 w-4 text-primary-600 shrink-0" />
                           )}
                         </button>
@@ -379,17 +404,22 @@ export function AppShell({
                 )}
               </AnimatePresence>
             </div>
-            )}
 
             {/* Notifications Popover */}
-            <div className="relative">
+            <div ref={notificationsRef} className="relative">
               <button
-                onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="relative rounded-xl p-2.5 text-surface-500 hover:bg-surface-100 hover:text-surface-700 transition-colors"
+                type="button"
+                onClick={() => {
+                  setNotificationsOpen((prev) => !prev);
+                  setRoleSwitcherOpen(false);
+                }}
+                className="relative rounded-xl p-2.5 text-surface-500 hover:bg-surface-100 hover:text-surface-700 transition-colors cursor-pointer"
                 title="Notifications"
               >
                 <Bell className="h-5 w-5" />
-                <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
+                {notifications.length > 0 && (
+                  <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
+                )}
               </button>
 
               <AnimatePresence>
@@ -403,26 +433,26 @@ export function AppShell({
                   >
                     <div className="flex items-center justify-between border-b border-surface-100 pb-2.5">
                       <h4 className="text-sm font-bold text-surface-900">Notifications & Alerts</h4>
-                      <span className="text-[11px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary-50 text-primary-700">
                         {notifications.length} Active
                       </span>
                     </div>
-
-                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                      {notifications.map((notif) => (
-                        <div key={notif.id} className="p-3 rounded-xl bg-surface-50 border border-surface-100 text-xs space-y-1">
-                          <div className="flex items-center gap-1.5 font-bold text-surface-900">
-                            {notif.type === 'low_stock' ? (
-                              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                            ) : (
-                              <Sparkles className="h-3.5 w-3.5 text-primary-500" />
-                            )}
-                            <span>{notif.title}</span>
+                    {notifications.length === 0 ? (
+                      <div className="py-6 text-center space-y-1">
+                        <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto" />
+                        <p className="text-xs font-semibold text-surface-700">You&apos;re all caught up</p>
+                        <p className="text-[11px] text-surface-400">No active stock or order alerts right now.</p>
+                      </div>
+                    ) : (
+                      <div className="max-h-64 overflow-y-auto space-y-2">
+                        {notifications.slice(0, 8).map((n) => (
+                          <div key={n.id} className="p-2.5 rounded-xl bg-surface-50 border border-surface-100 text-xs">
+                            <p className="font-semibold text-surface-900">{n.title}</p>
+                            <p className="text-surface-500 mt-0.5">{n.message}</p>
                           </div>
-                          <p className="text-surface-600 text-[11px]">{notif.message}</p>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -516,6 +546,9 @@ export function AppShell({
 
       {/* Offline Status PWA Banner */}
       <OfflineIndicator />
+
+      {/* Gemini AI ERP Assistant */}
+      <ErpChatbot />
 
       {/* ===== Mobile Navigation Drawer ===== */}
       <AnimatePresence>

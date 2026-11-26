@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/lib/store/store-context';
 import { useAuth } from '@/lib/auth/auth-context';
-import { PageHeader, Card, CardHeader, Button, EmptyState, Modal, Input, Select, Tabs, KPICard } from '@/components/ui';
+import { PageHeader, Card, CardHeader, Button, EmptyState, Modal, Input, Select, Tabs, KPICard, NumericInput } from '@/components/ui';
 import { formatCurrency, formatDate, toPaise } from '@/lib/utils';
 import type { Payment, PaymentMode } from '@/lib/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -321,12 +321,12 @@ export default function PaymentsPage() {
 
           <div>
             <label className="text-sm font-medium text-surface-700 block mb-1">Amount Received (₹ Rupees)</label>
-            <input
-              type="number"
+            <NumericInput
               min="1"
               step="any"
               value={amountRupees}
-              onChange={(e) => setAmountRupees(parseFloat(e.target.value) || 0)}
+              onValueChange={setAmountRupees}
+              placeholder="0"
               className="w-full h-10 px-3 rounded-lg border border-surface-300 bg-white text-base font-bold tabular-nums outline-none text-success-700"
             />
           </div>

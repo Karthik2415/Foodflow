@@ -343,7 +343,41 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, icon: Icon, className, ...props }, ref) => {
+  ({ label, error, hint, icon: Icon, className, type, value, onChange, ...props }, ref) => {
+    const isNumber = type === 'number';
+    const [numText, setNumText] = React.useState<string>(() =>
+      value === undefined || value === null || value === '' ? '' : String(value)
+    );
+
+    React.useEffect(() => {
+      if (!isNumber) return;
+      const numVal = value === undefined || value === null || value === '' ? 0 : Number(value);
+      const parsedLocal = numText === '' ? 0 : parseFloat(numText);
+      if (numText === '' && numVal === 0) return;
+      if (parsedLocal !== numVal) {
+        setNumText(value === undefined || value === null || value === '' ? '' : String(value));
+      }
+    }, [value, isNumber, numText]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (isNumber) {
+        let next = e.target.value;
+        if (/^0\d/.test(next)) {
+          next = next.replace(/^0+(?=\d)/, '');
+        }
+        setNumText(next);
+        if (onChange) {
+          const synthetic = {
+            ...e,
+            target: { ...e.target, value: next },
+          } as React.ChangeEvent<HTMLInputElement>;
+          onChange(synthetic);
+        }
+        return;
+      }
+      onChange?.(e);
+    };
+
     return (
       <div className="space-y-1.5">
         {label && (
@@ -355,6 +389,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           )}
           <input
             ref={ref}
+            type={type}
+            value={isNumber ? numText : value}
+            onChange={handleInputChange}
             className={cn(
               'flex h-11 w-full rounded-xl border bg-white px-3.5 text-sm transition-all',
               'placeholder:text-surface-400 text-surface-900',
@@ -375,6 +412,39 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   }
 );
 Input.displayName = 'Input';
+
+interface NumericInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange'> {
+  value: number;
+  onValueChange: (val: number) => void;
+}
+
+export function NumericInput({ value, onValueChange, ...props }: NumericInputProps) {
+  const [text, setText] = React.useState<string>(() => (value === 0 ? '' : String(value)));
+
+  React.useEffect(() => {
+    const parsed = text === '' ? 0 : parseFloat(text);
+    if (text === '' && value === 0) return;
+    if (parsed !== value) {
+      setText(value === 0 ? '' : String(value));
+    }
+  }, [value, text]);
+
+  return (
+    <input
+      type="number"
+      value={text}
+      onChange={(e) => {
+        let next = e.target.value;
+        if (/^0\d/.test(next)) {
+          next = next.replace(/^0+(?=\d)/, '');
+        }
+        setText(next);
+        onValueChange(next === '' ? 0 : parseFloat(next) || 0);
+      }}
+      {...props}
+    />
+  );
+}
 
 // ===== Select =====
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
