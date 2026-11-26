@@ -28,11 +28,11 @@ service cloud.firestore {
       return isAuthenticated() && (getUserRole() == 'accountant' || isOwnerOrAdmin());
     }
 
-    // User profiles (prevent self-escalation of role)
+    // User profiles (allow choosing role on self-registration, prevent role escalation on update)
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isOwnerOrAdmin()
-        || (request.auth.uid == userId && request.resource.data.role == 'salesman');
+        || (request.auth.uid == userId && request.resource.data.role in ['owner', 'admin', 'salesman', 'production_supervisor', 'accountant']);
       allow update: if isOwnerOrAdmin()
         || (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
       allow delete: if isOwnerOrAdmin();

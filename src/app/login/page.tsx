@@ -132,7 +132,7 @@ export default function LoginPage() {
           <p className="mt-1.5 text-base text-surface-500">
             {mode === 'login'
               ? 'Sign in to your account to continue'
-              : 'Register a new user in Firebase Authentication'}
+              : 'Register a new User'}
           </p>
 
           {error && (
@@ -157,24 +157,18 @@ export default function LoginPage() {
                   placeholder="Rajesh Kumar"
                   icon={User}
                 />
-                {!isLiveFirebase ? (
-                  <Select
-                    label="Role (Demo Mode)"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value as UserRole)}
-                    options={[
-                      { value: 'owner', label: 'Owner / CEO' },
-                      { value: 'admin', label: 'Administrator' },
-                      { value: 'salesman', label: 'Salesman' },
-                      { value: 'production_supervisor', label: 'Production Supervisor' },
-                      { value: 'accountant', label: 'Accountant / Auditor' },
-                    ]}
-                  />
-                ) : (
-                  <p className="text-xs text-surface-500 bg-surface-100 rounded-xl px-3 py-2 border border-surface-200">
-                    New accounts start with <strong>Salesman</strong> access. An Owner or Admin can assign elevated roles.
-                  </p>
-                )}
+                <Select
+                  label="Role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as UserRole)}
+                  options={[
+                    { value: 'owner', label: 'Owner / CEO' },
+                    { value: 'admin', label: 'Administrator' },
+                    { value: 'salesman', label: 'Salesman' },
+                    { value: 'production_supervisor', label: 'Production Supervisor' },
+                    { value: 'accountant', label: 'Accountant / Auditor' },
+                  ]}
+                />
               </>
             )}
 

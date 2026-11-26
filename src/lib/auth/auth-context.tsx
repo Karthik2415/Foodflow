@@ -200,9 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(cred.user, { displayName });
-      // Self-registered accounts always start with least-privilege 'salesman' role in live Firebase;
-      // an Owner/Admin can promote roles in Firestore or via setUserRole.
-      const assignedRole: UserRole = 'salesman';
+      const assignedRole: UserRole = role || 'salesman';
       const userProfile: Omit<AppUser, 'id'> = {
         email,
         displayName,
