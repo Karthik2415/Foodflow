@@ -112,20 +112,15 @@ export default function LoginPage() {
             <Image src="/logo.png" alt="FoodFlow" width={180} height={56} className="object-contain" />
           </div>
 
-          {/* Connection Status Pill */}
-          <div className="mb-4">
-            {isLiveFirebase ? (
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <Wifi className="h-3.5 w-3.5" />
-                Connected to Live Firebase Project
-              </span>
-            ) : (
+          {/* Connection Status Pill — only shown in Demo Mode */}
+          {!isLiveFirebase && (
+            <div className="mb-4">
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
                 <Database className="h-3.5 w-3.5" />
-                Local Demo Mode (Add keys in .env.local for Live Firebase)
+                Demo Mode — Not connected to a live Firebase project
               </span>
-            )}
-          </div>
+            </div>
+          )}
 
           <h2 className="text-3xl font-extrabold tracking-tight text-surface-900">
             {mode === 'login' ? 'Welcome back' : 'Create account'}
