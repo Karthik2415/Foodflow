@@ -211,7 +211,7 @@ export default function LoginPage() {
               className="text-sm font-semibold text-primary-600 hover:text-primary-700 cursor-pointer"
             >
               {mode === 'login'
-                ? 'Need a new Firebase account? Create one'
+                ? 'Need a new account? Create one.'
                 : 'Already have an account? Sign in'}
             </button>
           </div>
